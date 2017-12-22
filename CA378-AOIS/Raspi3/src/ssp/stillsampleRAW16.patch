@@ -1,0 +1,22 @@
+--- stillsampleRAW16.c	2017-09-03 11:19:47.000000000 +0900
++++ stillsampleRAW16.c	2017-12-20 10:00:00.000000000 +0900
+@@ -37,7 +37,7 @@
+ }
+ 
+ char *filename;
+-#define WaitCount 1000
++int WaitCount = 100;
+ void fame_preprocess(struct ssp_handle *handle, struct ssp_frame *frame){
+   //  printf("Preprocess is active. frame_count = %d\n", frame_count);
+   frame_count ++;
+@@ -78,7 +78,9 @@
+ 
+   profile_filename = argv[1];
+   filename = argv[2];
+-
++  if (argc >= 4) {
++    WaitCount = atoi(argv[3]);
++  }
+   
+   stop_process = 0;
+   if (signal(SIGINT, signal_handler) == SIG_ERR)

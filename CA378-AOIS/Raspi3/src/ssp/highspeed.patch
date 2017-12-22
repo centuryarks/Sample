@@ -1,0 +1,314 @@
+--- highspeed.c	2016-12-09 11:28:46.000000000 +0900
++++ highspeed.c	2017-12-20 10:00:00.000000000 +0900
+@@ -6,7 +6,9 @@
+ #include <signal.h>
+ #include <unistd.h>
+ #include <time.h>
++#include <mqueue.h>
+ 
++#define HAVE_OPENCV_VIDEOIO
+ #include<opencv/cv.h>
+ #include <opencv/highgui.h>
+ // sudo apt-get install libopencv-dev
+@@ -60,9 +62,9 @@
+ int g_pause_mode = PAUSE_MODE_RUNNING;
+ int g_slow_rate = 0;
+ int g_info_show = INFO_SHOW_ENABLE;
+-float g_balanceR = 1.f;
+-float g_balanceG = 1.f;
+-float g_balanceB = 1.f;
++float g_balanceR = 2.13f;
++float g_balanceG = 1.00f;
++float g_balanceB = 1.93f;
+ static int g_frame_mode_flg = FRAME_MODE_REALTIMEPREVIEW;
+ static int g_fno = 0;
+ static int g_stepval = 1;
+@@ -92,6 +94,11 @@
+ int __CCIRegWrite(struct ssp_handle *handle, int address, int data);
+ int __CCIRegRead(struct ssp_handle *handle, int address, int *data);
+ 
++static void MsgThread(union sigval sv);
++int s_key = 0;
++
++int flip = 0;
++
+ static void signal_handler(int sig)
+ {
+   printf("Terminated.\n");
+@@ -457,6 +464,12 @@
+ 
+   frame_preview_info_show();
+   int key = cvWaitKey(10) & 0xff;
++  if (s_key != 0)
++  {
++    key = s_key;
++    s_key = 0;
++  }
++
+   process_preview_mode_key(key);
+ 
+   // get fps
+@@ -513,20 +526,25 @@
+ void frame_realtime_preview_info_show()
+ {
+   cvCvtColor( BayerImg, RGBImg, CV_BayerRG2RGB);
+-  sprintf(g_text_buf, "[Realtime Monitoring Mode]");
+-  cvPutText(RGBImg, g_text_buf, cvPoint(0,30), &g_font, CV_RGB(255, 0, 0));
+-  sprintf(g_text_buf, "[R] to Recording");
+-  cvPutText(RGBImg, g_text_buf, cvPoint(0,60), &g_font, CV_RGB(255, 0, 0));
++  //sprintf(g_text_buf, "[Realtime Monitoring Mode]");
++  //cvPutText(RGBImg, g_text_buf, cvPoint(0,30), &g_font, CV_RGB(255, 0, 0));
++  //sprintf(g_text_buf, "[R] to Recording");
++  //cvPutText(RGBImg, g_text_buf, cvPoint(0,60), &g_font, CV_RGB(255, 0, 0));
++
++  if (flip) {
++    cvFlip(RGBImg, RGBImg, -1);
++  }
+ 
+   // get fps
+   double fps = get_fps();
+ 
+   // show fps
+-  sprintf(g_text_buf,"FrameRate = %f", fps);
+-  cvPutText(RGBImg, g_text_buf, cvPoint(0,90), &g_font, CV_RGB(255, 0, 0));
++  sprintf(g_text_buf,"FPS:%.1f", fps);
++  //cvPutText(RGBImg, g_text_buf, cvPoint(0,90), &g_font, CV_RGB(255, 0, 0));
++  cvPutText(RGBImg, g_text_buf, cvPoint(0,30), &g_font, CV_RGB(255, 0, 0));
+ 
+-  sprintf(g_text_buf,"WB R=%1.3f G=%1.3f B=%1.3f", g_balanceR, g_balanceG, g_balanceB);
+-  cvPutText(RGBImg, g_text_buf, cvPoint(0,120), &g_font, CV_RGB(255, 0, 0));
++  //sprintf(g_text_buf,"WB R=%1.3f G=%1.3f B=%1.3f", g_balanceR, g_balanceG, g_balanceB);
++  //cvPutText(RGBImg, g_text_buf, cvPoint(0,120), &g_font, CV_RGB(255, 0, 0));
+ }
+ 
+ void frame_realtime_preview(struct ssp_frame *frame)
+@@ -537,6 +555,11 @@
+   frame_realtime_preview_info_show();
+ 
+   int key = cvWaitKey(2) & 0xff;
++  if (s_key != 0)
++  {
++    key = s_key;
++    s_key = 0;
++  }
+ 
+   if (key == KEY_CMD_RECORDING) {
+     g_frame_mode_flg = FRAME_MODE_RECORDING;
+@@ -596,48 +619,97 @@
+   int coarse_integration_time;
+   int RegVal; 
+ 
+-  // analog gain
+-  if (argc >= 3) {
+-    analog_gain = atoi(argv[2]);
+-    printf("param:analog_gain=%02x\n", analog_gain);
+-    RegVal = analog_gain; 
+-    __CCIRegWrite(handle, 0x157, RegVal);
+-  }
+-  else {
+-    RegVal = 0xe0; // e0=>01
+-    printf("default:analog_gain=%02x\n", RegVal);
+-    __CCIRegWrite(handle, 0x157, RegVal);
+-  }
++  if ( strcmp(argv[5], "IMX219") == 0)
++  {
++    // analog gain
++    if (argc >= 3) {
++      analog_gain = atoi(argv[2]);
++      printf("param:analog_gain=%02x\n", analog_gain);
++      RegVal = analog_gain; 
++      __CCIRegWrite(handle, 0x157, RegVal);
++    }
++    else {
++      RegVal = 0xe0; // e0=>01
++      printf("default:analog_gain=%02x\n", RegVal);
++      __CCIRegWrite(handle, 0x157, RegVal);
++    }
+ 
+-  // digital gain
+-  if (argc >= 4) {
+-    digital_gain = atoi(argv[3]);
+-    printf("param:digital_gain=%04x\n", digital_gain);
+-    RegVal = (digital_gain & 0xff00) >> 8; 
+-    __CCIRegWrite(handle, 0x158, RegVal);
+-    RegVal = (digital_gain & 0x00ff); 
+-    __CCIRegWrite(handle, 0x159, RegVal);
+-  }
+-  else {
+-    RegVal = 0x03; // 03=>00
+-    __CCIRegWrite(handle, 0x158, RegVal);
++    // digital gain
++    if (argc >= 4) {
++      digital_gain = atoi(argv[3]);
++      printf("param:digital_gain=%04x\n", digital_gain);
++      RegVal = (digital_gain & 0xff00) >> 8; 
++      __CCIRegWrite(handle, 0x158, RegVal);
++      RegVal = (digital_gain & 0x00ff); 
++      __CCIRegWrite(handle, 0x159, RegVal);
++    }
++    else {
++      RegVal = 0x03; // 03=>00
++      __CCIRegWrite(handle, 0x158, RegVal);
+ 
+-    RegVal = 0x00; // 00
+-    __CCIRegWrite(handle, 0x159, RegVal);
+-    printf("default:digital_gain=%04x\n", 0x0300);
+-  }
+-
+-  // coarse_integration_time
+-  if (argc >= 5) {
+-    coarse_integration_time = atoi(argv[4]);
+-    printf("param:coars_integration_time=%04x\n", coarse_integration_time);
+-    RegVal = (coarse_integration_time & 0xff00) >> 8; 
+-    __CCIRegWrite(handle, 0x15A, RegVal);
+-    RegVal = (coarse_integration_time & 0x00ff); 
+-    __CCIRegWrite(handle, 0x15B, RegVal);
++      RegVal = 0x00; // 00
++      __CCIRegWrite(handle, 0x159, RegVal);
++      printf("default:digital_gain=%04x\n", 0x0300);
++    }
++
++    // coarse_integration_time
++    if (argc >= 5) {
++      coarse_integration_time = atoi(argv[4]);
++      printf("param:coars_integration_time=%04x\n", coarse_integration_time);
++      RegVal = (coarse_integration_time & 0xff00) >> 8; 
++      __CCIRegWrite(handle, 0x15A, RegVal);
++      RegVal = (coarse_integration_time & 0x00ff); 
++      __CCIRegWrite(handle, 0x15B, RegVal);
++    }
++  }
++  else if ( strcmp(argv[5], "IMX378") == 0)
++  {
++    // analog gain
++    if (argc >= 3) {
++      analog_gain = atoi(argv[2]);
++      printf("param:analog_gain=%02x\n", analog_gain);
++      RegVal = (analog_gain & 0xff00) >> 8;
++      __CCIRegWrite(handle, 0x204, RegVal);
++      RegVal = (analog_gain & 0x00ff); 
++      __CCIRegWrite(handle, 0x205, RegVal);
++    }
++    else {
++      analog_gain = 953;
++      printf("default:analog_gain=%04x\n", analog_gain);
++      RegVal = 0x00;
++      __CCIRegWrite(handle, 0x204, RegVal);
++      RegVal = 0xe0; 
++      __CCIRegWrite(handle, 0x205, RegVal);
++    }
++
++    // digital gain
++    if (argc >= 4) {
++      digital_gain = atoi(argv[3]);
++      printf("param:digital_gain=%04x\n", digital_gain);
++      RegVal = (digital_gain & 0xff00) >> 8; 
++      __CCIRegWrite(handle, 0x20E, RegVal);
++      RegVal = (digital_gain & 0x00ff); 
++      __CCIRegWrite(handle, 0x20F, RegVal);
++    }
++    else {
++      digital_gain = 256;
++      printf("default:digital_gain=%04x\n", digital_gain);
++      RegVal = (digital_gain & 0xff00) >> 8; 
++      __CCIRegWrite(handle, 0x20E, RegVal);
++      RegVal = (digital_gain & 0x00ff); 
++      __CCIRegWrite(handle, 0x20F, RegVal);
++    }
++
++    // coarse_integration_time
++    if (argc >= 5) {
++      coarse_integration_time = atoi(argv[4]);
++      printf("param:coars_integration_time=%04x\n", coarse_integration_time);
++      RegVal = (coarse_integration_time & 0xff00) >> 8; 
++      __CCIRegWrite(handle, 0x202, RegVal);
++      RegVal = (coarse_integration_time & 0x00ff); 
++      __CCIRegWrite(handle, 0x203, RegVal);
++    }
+   }
+-
+-
+ }
+ 
+ #define GAMMA_OPTION SSP_DISABLE
+@@ -652,6 +724,10 @@
+     return 0;
+   }
+ 
++  if (argc >= 7) {
++    flip = atoi(argv[6]);
++  }
++
+   char *profile_filename;
+   int retval;
+ 
+@@ -723,8 +799,31 @@
+ 
+     cvWaitKey(2);
+ 
++
++    mqd_t mqdes;
++    struct sigevent sig_notify;
++
++    mqdes = mq_open("/mq_demo", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH, NULL);
++    if (mqdes == -1)
++    {
++      perror("mq_open");
++    }
++    else
++    {
++      sig_notify.sigev_notify = SIGEV_THREAD;
++      sig_notify.sigev_notify_function = MsgThread;
++      sig_notify.sigev_notify_attributes = NULL;
++      sig_notify.sigev_value.sival_ptr = &mqdes;
++      if (mq_notify(mqdes, &sig_notify) == -1)
++      {
++        perror("mq_notify");
++      }
++    }
++
+     while(1){ if(stop_process==1) break;}
+ 
++    mq_unlink("/mq_demo");
++
+     ////////////////////////////////////////
+     discard_frame_array();
+     ////////////////////////////////////////
+@@ -758,3 +857,37 @@
+   return 1;
+ }
+ 
++static void MsgThread(union sigval sv)
++{
++  struct mq_attr attr;
++  ssize_t nr;
++  void *buf = NULL;
++  mqd_t mqdes = *((mqd_t *) sv.sival_ptr);
++
++  if (mq_getattr(mqdes, &attr) == -1)
++  {
++    perror("mq_getattr");
++    goto fail;
++  }
++
++  buf = malloc(attr.mq_msgsize);
++  if (buf == NULL)
++  {
++    perror("malloc");
++    goto fail;
++  }
++
++  nr = mq_receive(mqdes, buf, attr.mq_msgsize, NULL);
++  if (nr == -1)
++  {
++    perror("mq_receive");
++    goto fail;
++  }
++
++  char *p = (char*)buf;
++  s_key = (int)p[0];
++  printf("command:%c\n", p[0]);
++
++fail:
++  if (buf != NULL) free(buf);
++}
