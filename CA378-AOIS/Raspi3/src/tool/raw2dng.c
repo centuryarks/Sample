@@ -75,6 +75,10 @@ int main (int argc, char **argv)
     int SKIPLINE = 0;
     int BIT      = 10;
     int FLIP     = 0;
+    int BLACK_LEVEL = 256;
+    double R_GAIN = 2.0;
+    double G_GAIN = 1.0;
+    double B_GAIN = 2.0;
 
     int argChk = 0;
     int sizChk = 0;
@@ -120,16 +124,16 @@ int main (int argc, char **argv)
             }
         } else if (strcmp(argv[i], "-gain") == 0) {
             if (i+3 < argc) {
-                neutral[0] = atof(argv[i+1]);
-                neutral[1] = atof(argv[i+2]);
-                neutral[2] = atof(argv[i+3]);
-                printf("gain:%s %s %s\n", argv[i+1], argv[i+2], argv[i+3]);
+                R_GAIN = atof(argv[i+1]);
+                G_GAIN = atof(argv[i+2]);
+                B_GAIN = atof(argv[i+3]);
+                printf("Gain:%s %s %s\n", argv[i+1], argv[i+2], argv[i+3]);
             }
         }
     }
 
     if (argChk < 2) {
-        fprintf (stderr, "Example: %s -i input.raw -o output.dng -w 1920 -h 1080 -skipline 0 -bit 10 -flip 1 -gain 0.5 1.0 0.5\n", argv[0]);
+        fprintf (stderr, "Example: %s -i input.raw -o output.dng -w 1920 -h 1080 -skipline 0 -bit 10 -flip 1 -gain 2.0 1.0 2.0 -black 256\n", argv[0]);
         return 1;
     }
 
@@ -169,8 +173,16 @@ int main (int argc, char **argv)
 
     if (!(tif = TIFFOpen (outFilename, "w"))) goto fail;
 
-    for (i = 0; i < 0x100; i++) {
-        curve[i] = 255.0 * pow (i / 255.0, 1.0 / 2.2);
+    // sRGB Gamma (approx 2.2)
+    for (i = 0; i < 0x10000; i++) {
+        double v = i / 65535.0;
+        if (v <= 0.0031308) {
+          v *= 12.92;
+        } else {
+          v = 1.055 * pow(v, 1.0 / 2.4) - 0.055;
+        }
+        if (v > 1.0) v = 1.0;
+        curve[i] = (int)(v * 65535.0 + 0.5);
     }
 
     TIFFSetField (tif, TIFFTAG_DNGVERSION, "\01\01\00\00");
@@ -187,13 +199,13 @@ int main (int argc, char **argv)
     TIFFSetField (tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
     TIFFSetField (tif, TIFFTAG_CFAREPEATPATTERNDIM, CFARepeatPatternDim);
     TIFFSetField (tif, TIFFTAG_CFAPATTERN, 4, "\00\01\01\02");
-    TIFFSetField (tif, TIFFTAG_MAKE, "CA");
-    TIFFSetField (tif, TIFFTAG_UNIQUECAMERAMODEL, "IMX378");
+    TIFFSetField (tif, TIFFTAG_MAKE, "CenturyArks");
+    TIFFSetField (tif, TIFFTAG_UNIQUECAMERAMODEL, "CA378-AOIS");
     TIFFSetField (tif, TIFFTAG_COLORMATRIX1, 9, cam_xyz);
     TIFFSetField (tif, TIFFTAG_ASSHOTNEUTRAL, 3, neutral);
     TIFFSetField (tif, TIFFTAG_CFALAYOUT, 1);
     TIFFSetField (tif, TIFFTAG_CFAPLANECOLOR, 3, "\00\01\02");
-    TIFFSetField (tif, TIFFTAG_LINEARIZATIONTABLE, 0x100, curve);
+    TIFFSetField (tif, TIFFTAG_LINEARIZATIONTABLE, 0x10000, curve);
     TIFFSetField (tif, TIFFTAG_WHITELEVEL, 1, &white);
     TIFFSetField (tif, TIFFTAG_SUBIFD, 1, &sub_offset);
 
@@ -210,9 +222,24 @@ int main (int argc, char **argv)
         }
     }
 
+    int opb = BLACK_LEVEL >> (12 - BIT);
     for (row = 0; row < VPIXELS; row++) {
         for (col = 0; col < HPIXELS; col++) {
-            pixel[row * HPIXELS + col] <<= (16 - BIT);
+            int val = pixel[row * HPIXELS + col];
+            int pos = (col & 0x1) + (row & 0x1) * 2;
+            if (pos == 0x0) {       // R pixel
+                val = (val - opb) * R_GAIN + opb;
+            }
+            else if (pos == 0x3) {  // B pixel
+                val = (val - opb) * B_GAIN + opb;
+            }
+            else {                  // G pixel
+                val = (val - opb) * G_GAIN + opb;
+            }
+            if (val < 0) val = 0;
+            val <<= (16 - BIT);
+            if (val > 0xFFFF) val = 0xFFFF;
+            pixel[row * HPIXELS + col] = val;
         }
         TIFFWriteScanline (tif, &pixel[row * HPIXELS], row, 0);
     }
