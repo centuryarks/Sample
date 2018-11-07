@@ -6,7 +6,7 @@ echo '#' DEMO Setting>>demo.ini
 echo preview=${PWD}/script/preview.sh>>demo.ini
 echo stillCapture12M_Normal=${PWD}/script/stillCapture12M_Normal.sh>>demo.ini
 echo stillCapture12M_HDR=${PWD}/script/stillCapture12M_HDR.sh>>demo.ini
-echo stillCaptureFrame=20>>demo.ini
+echo stillCaptureFrame=50>>demo.ini
 echo gyroGainRateX=1.00>>demo.ini
 echo gyroGainRateY=1.00>>demo.ini
 echo autoFocusGain=2.0>>demo.ini
@@ -41,7 +41,7 @@ touch stillCapture12M_Normal.sh
 echo '#'!/bin/sh>>stillCapture12M_Normal.sh
 echo cd ${PWD}>>stillCapture12M_Normal.sh
 echo ./bin/stillsampleRAW16 ./profile/IMX378_3968x3008.xml IMX378_3968x3008.raw '$'1>>stillCapture12M_Normal.sh
-echo ./bin/raw2dng -i IMX378_3968x3008.raw -o IMX378_3968x3008.dng -w 3968 -h 3008 -bit 10 -gain 0.5 1.0 0.6>>stillCapture12M_Normal.sh
+echo ./bin/raw2dng -i IMX378_3968x3008.raw -o IMX378_3968x3008.dng -w 3968 -h 3008 -bit 10 -gain 2.13 1.0 1.93>>stillCapture12M_Normal.sh
 echo ufraw IMX378_3968x3008.dng --wb=camera>>stillCapture12M_Normal.sh
 mv stillCapture12M_Normal.sh ./script
 
@@ -51,8 +51,8 @@ echo '#'!/bin/sh>>stillCapture12M_HDR.sh
 echo cd ${PWD}>>stillCapture12M_HDR.sh
 echo ./bin/stillsampleRAW16 ./profile/IMX378_3968x3008_HDR.xml IMX378_3968x3008_HDR.raw '$'1>>stillCapture12M_HDR.sh
 echo ./bin/raw2hdr -i IMX378_3968x3008_HDR.raw -o IMX378_3968x3008_HDR -w 3968 -h 3008>>stillCapture12M_HDR.sh
-echo ./bin/raw2dng -i IMX378_3968x3008_HDR_L.raw -o IMX378_3968x3008_HDR_L.dng -w 3968 -h 3008 -bit 10 -gain 0.5 1.0 0.6>>stillCapture12M_HDR.sh
-echo ./bin/raw2dng -i IMX378_3968x3008_HDR_S.raw -o IMX378_3968x3008_HDR_S.dng -w 3968 -h 3008 -bit 10 -gain 0.5 1.0 0.6>>stillCapture12M_HDR.sh
+echo ./bin/raw2dng -i IMX378_3968x3008_HDR_L.raw -o IMX378_3968x3008_HDR_L.dng -w 3968 -h 3008 -bit 10 -gain 2.13 1.0 1.93>>stillCapture12M_HDR.sh
+echo ./bin/raw2dng -i IMX378_3968x3008_HDR_S.raw -o IMX378_3968x3008_HDR_S.dng -w 3968 -h 3008 -bit 10 -gain 2.13 1.0 1.93>>stillCapture12M_HDR.sh
 echo ufraw-batch IMX378_3968x3008_HDR_L.dng --output=IMX378_3968x3008_HDR_L.ppm --overwrite --wb=camera>>stillCapture12M_HDR.sh
 echo ufraw-batch IMX378_3968x3008_HDR_S.dng --output=IMX378_3968x3008_HDR_S.ppm --overwrite --wb=camera>>stillCapture12M_HDR.sh
 echo python3 ./script/HDR.py>>stillCapture12M_HDR.sh
@@ -64,3 +64,36 @@ chmod 755 ./script/*.sh
 chmod 755 ./script/*.py
 cp ./script/demo.sh ~/Desktop/
 cp ./script/highspeed.sh ~/Desktop/
+
+# config setting
+cd ../
+sudo patch --merge /boot/config.txt < ./demo/config.patch
+
+# library setting
+
+LIBSSP=libssp.conf
+LIBHEX=libhexavision_ctl.conf
+
+if [ -e ./libssp/1.31/lib ]; then
+  touch ${LIBSSP}
+  echo ${PWD}/libssp/1.31/lib>>${LIBSSP}
+  sudo mv ${LIBSSP} /etc/ld.so.conf.d/
+else
+  echo "Download \"libssp-1.31.tar.gz\" from the following site."
+  echo "https://www.visionproc.org/download.php"
+  echo "$ tar zxvf libssp-1.31.tar.gz"
+  exit 1
+fi
+
+if [ -e ./HexaVisionControl/0.92/lib ]; then
+  touch ${LIBHEX}
+  echo ${PWD}/HexaVisionControl/0.92/lib>>${LIBHEX}
+  sudo mv ${LIBHEX} /etc/ld.so.conf.d/
+else
+  echo "Download \"HexaVisionControl-0.92.tar.gz\" from the following site."
+  echo "https://www.visionproc.org/download.php"
+  echo "$ tar zxvf HexaVisionControl-0.92.tar.gz"
+  exit 1
+fi
+
+sudo ldconfig
