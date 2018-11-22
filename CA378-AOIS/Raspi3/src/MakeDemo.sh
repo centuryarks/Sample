@@ -24,13 +24,13 @@ else
   exit 1
 fi
 
-if [ -f ~/libssp/1.28/sample/stillsampleRAW16/stillsampleRAW16.c ]; then
-  cp ~/libssp/1.28/sample/stillsampleRAW16/stillsampleRAW16.c ./
+if [ -f ~/libssp/1.31/sample/stillsampleRAW16/stillsampleRAW16.c ]; then
+  cp ~/libssp/1.31/sample/stillsampleRAW16/stillsampleRAW16.c ./
   patch < stillsampleRAW16.patch
 else
-  echo "Download \"libssp-1.28.tar.gz\" from the following site."
+  echo "Download \"libssp-1.31.tar.gz\" from the following site."
   echo "https://www.visionproc.org/download.php"
-  echo "$ tar zxvf libssp-1.28.tar.gz"
+  echo "$ tar zxvf libssp-1.31.tar.gz"
   exit 1
 fi
 

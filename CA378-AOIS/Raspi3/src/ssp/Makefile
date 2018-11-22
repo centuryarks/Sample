@@ -1,7 +1,7 @@
 CC = gcc
 
-SSP_LIB = -L/home/pi/libssp/1.28/lib
-SSP_INC = -I/home/pi/libssp/1.28/include
+SSP_LIB = -L/home/pi/libssp/1.31/lib
+SSP_INC = -I/home/pi/libssp/1.31/include
 
 MMAL_LIB = -L/opt/vc/lib -lmmal -lmmal_core -lmmal_util -lvcos -lbcm_host -lwiringPi -lpthread
 

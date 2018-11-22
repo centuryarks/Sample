@@ -65,10 +65,6 @@ chmod 755 ./script/*.py
 cp ./script/demo.sh ~/Desktop/
 cp ./script/highspeed.sh ~/Desktop/
 
-# config setting
-cd ../
-sudo patch --merge /boot/config.txt < ./demo/config.patch
-
 # library setting
 
 LIBSSP=libssp.conf
