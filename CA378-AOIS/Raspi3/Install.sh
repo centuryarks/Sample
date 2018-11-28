@@ -64,6 +64,7 @@ chmod 755 ./script/*.sh
 chmod 755 ./script/*.py
 cp ./script/demo.sh ~/Desktop/
 cp ./script/highspeed.sh ~/Desktop/
+cd ..
 
 # library setting
 

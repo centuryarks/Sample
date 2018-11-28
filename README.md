@@ -6,6 +6,10 @@
 [CA378-AOIS Sample code v1.0.0 for Jetson TX2](https://github.com/centuryarks/Sample/releases/download/v1.0/demo_v1.0.0_tx2.tar.gz)
 
 ### CA378-AOIS Sample code for Raspberry Pi 3
+[CA378-AOIS Sample code v1.0.4 for Raspberry Pi 3](https://github.com/centuryarks/Sample/releases/download/v1.0.4/demo_v1.0.4_pi3.tar.gz)
+(Support for SSP library 1.31)
+- Support for Raspbian 2018-11-13, SSP library 1.31
+
 [CA378-AOIS Sample code v1.0.3 for Raspberry Pi 3](https://github.com/centuryarks/Sample/releases/download/v1.0.3/demo_v1.0.3_pi3.tar.gz)
 (Support for SSP library 1.31)
 - Added Raspbian configuration procedure
