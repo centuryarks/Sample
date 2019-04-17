@@ -1,7 +1,12 @@
 ## C Program examples
 
 ### CA378-AOIS Sample code for Jetson TX2
+
+[CA378-AOIS Sample code v1.1.5 for Jetson TX2 (L4T 28.2/L4T 28.2.1)](https://github.com/centuryarks/Sample/releases/download/JSX2_v1.1.5(Jetpack3.2.1%2FJetpack3.3)/demo_v1.1.5_tx2.tar.gz)
+- Support for Jetpack 3.2.1 / Jetpack 3.3
+
 [CA378-AOIS Sample code v1.1.0 for Jetson TX2 (L4T 27.1)](https://github.com/centuryarks/Sample/releases/download/v1.1.0/demo_v1.1.0_tx2.tar.gz)
+- Support for Jetpack 3.0
 
 [CA378-AOIS Sample code v1.0.0 for Jetson TX2](https://github.com/centuryarks/Sample/releases/download/v1.0/demo_v1.0.0_tx2.tar.gz)
 
