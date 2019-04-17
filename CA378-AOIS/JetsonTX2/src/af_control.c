@@ -45,11 +45,12 @@ int afPosition                   = 0x200;
 int lastAfPosition               = 0x200;
 int dccCount                     = 0;
 double dccAve                    = 0.0;
+double lastDccAve                = 9999.0;
 double posAve                    = 0.0;
-double AutoFocusGain             = 2.0;
+double AutoFocusGain             = 20.0;
 int AutoFocusMoveLimit           = 100;
 int AutoFocusConfidenceThreshold = 10;
-int AutoFocusAverageNum          = 1;
+int AutoFocusAverageNum          = 10;
 int SENS_ID                      = 0;
 int WIDTH                        = 4056;
 int HEIGHT                       = 3040;
@@ -159,21 +160,23 @@ void AFControl(int pdafWidth, int pdafHeight)
         printf("error!\n");
     }
 
-    dcc = CalcDCC(readData, pdafWidth, pdafHeight);
-    if (dcc == 0)
+    dccAve = CalcDCC(readData, pdafWidth, pdafHeight);
+    if (dccAve == 0)
     {
         return;
     }
 
-    dccAve += dcc;
-    posAve += afPosition;
     dccCount++;
 
     if (dccCount == AutoFocusAverageNum)
     {
-        posAve /= dccCount;
-        dccAve /= dccCount;
+        lastDccAve = dccAve;
+        dccCount = 0;
+    }
 
+    if ((dccAve * dccAve) < (lastDccAve * lastDccAve))
+    {
+        /*
         printf("Phase Difference:\n");
         for (h = 0; h < pdafHeight; h++)
         {
@@ -209,10 +212,23 @@ void AFControl(int pdafWidth, int pdafHeight)
             }
             printf("\n");
         }
-        cof /= (pdafWidth * pdafHeight);
-        printf("Average:\r\n  Position:%4.lf, Phase Difference:%6.2lf, Confidence:%6.2lf\r\n", posAve, dccAve, cof);
+        cof /= (pdafWidth * pdafHeight * 100);
+        */
 
-        dcc = dccAve * AutoFocusGain;
+        cof = 0.0;
+        for (h = 0; h < pdafHeight; h++)
+        {
+            for (w = 0; w < pdafWidth; w++)
+            {
+                if (TableCount[h * pdafWidth + w] != 0)
+                {
+                    cof += TableCOF[h * pdafWidth + w] / TableCount[h * pdafWidth + w];
+                }
+            }
+        }
+        cof /= (pdafWidth * pdafHeight * 100);
+
+        dcc = cof * dccAve * AutoFocusGain;
         if (dcc >  AutoFocusMoveLimit) dcc =  AutoFocusMoveLimit;
         if (dcc < -AutoFocusMoveLimit) dcc = -AutoFocusMoveLimit;
 
@@ -221,9 +237,9 @@ void AFControl(int pdafWidth, int pdafHeight)
         if (afPosition > 0x3FF) afPosition = 0x3FF;
         DirectMove(afPosition);
 
-        dccAve = 0.0;
-        posAve = 0.0;
-        dccCount = 0;
+        printf("Average:\r\n  Position:%d, Phase Difference:%6.2lf, Confidence:%6.2lf\r\n", afPosition, dccAve, cof * 100);
+
+        lastDccAve = dccAve;
     }
 
     usleep(10 * 1000);

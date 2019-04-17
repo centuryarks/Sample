@@ -11,6 +11,9 @@ echo autoFocusGain=2.0>>demo.ini
 echo autoFocusConfidenceThreshold=10>>demo.ini
 echo autoFocusMoveLimit=100>>demo.ini
 echo AutoFocusAverageNum=1>>demo.ini
+echo Exposure=1000>>demo.ini
+echo Gain=200>>demo.ini
+echo HDRratio=16>>demo.ini
 mv demo.ini ./bin/
 
 # make demo script
@@ -18,7 +21,7 @@ touch demo.sh
 echo '#'!/bin/sh>>demo.sh
 echo ID='$1'>>demo.sh
 echo cd ${PWD}>>demo.sh
-echo sudo ./bin/DemoGUI -id '$ID' -w 3840 -h 2160 -fps 30>>demo.sh
+echo sudo ./bin/DemoGUI -id '$ID' -w 4056 -h 3040 -fps 30>>demo.sh
 mv demo.sh ./script/
 
 # make DEMO.desktop
@@ -37,7 +40,24 @@ echo X-Ubuntu-Gettext-Domain=software-properties>>DEMO.desktop
 echo Name[en_US]=DEMO>>DEMO.desktop
 echo Comment[en_US]=>>DEMO.desktop
 
+touch DEMO6.desktop
+echo [Desktop Entry]>>DEMO6.desktop
+echo Keywords=Drivers';'>>DEMO6.desktop
+echo Exec=gnome-terminal --geometry=120x32+3000+2000 --command ${PWD}/script/"'demo6.sh'">>DEMO6.desktop
+echo Icon=/usr/share/app-install/icons/whichwayisup.png>>DEMO6.desktop
+echo Terminal=false>>DEMO6.desktop
+echo Type=Application>>DEMO6.desktop
+echo NotShownIn=GNOME';'Unity';'KDE';'>>DEMO6.desktop
+echo Categories=X-XFCE';'GTK';'Settings';'HardwareSettings>>DEMO6.desktop
+echo Name=Additional Drivers>>DEMO6.desktop
+echo Comment=Configure third-party and proprietary drivers>>DEMO6.desktop
+echo X-Ubuntu-Gettext-Domain=software-properties>>DEMO6.desktop
+echo Name[en_US]=DEMO6>>DEMO6.desktop
+echo Comment[en_US]=>>DEMO6.desktop
+
 # copy files
 chmod +x ./script/*.sh
 chmod +x DEMO.desktop
+chmod +x DEMO6.desktop
 mv DEMO.desktop ~/Desktop/
+mv DEMO6.desktop ~/Desktop/

@@ -50,11 +50,19 @@ int DemoInit();
 int DemoExit();
 int DemoControl(char *commandLine);
 int ReadSettingFile();
-int StillCapture(int mode);
+int WriteSettingFile();
+int StillCapture(int mode, int hdr_ratio);
 void StillCaptureMode(int mode);
 int Highspeed();
 int MessageQueueSend(char *message);
 void *AFCThread(void *arg);
+
+/***************************************************************
+ *  Property
+ **************************************************************/
+int GetExposure();
+int GetGain();
+int GetHDRratio();
 
 
 /*******************************************************************************

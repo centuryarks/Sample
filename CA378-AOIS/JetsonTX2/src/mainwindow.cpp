@@ -44,6 +44,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     char string[STR_MAX];
+    QString qstring;
 
     DemoInit();
 
@@ -51,13 +52,23 @@ MainWindow::MainWindow(QWidget *parent) :
     ois_mode = 0;
     focus_position = 512;
     af_on = 0;
+    exposure = GetExposure();
+    gain = GetGain();
+    hdr_ratio = GetHDRratio();
 
     ui->setupUi(this);
     ui->radioButton_Direct->setChecked(true);
     ui->radioButton_OIS_Mode0->setChecked(true);
-    ui->lineEdit_FocusPosition->setText("512");
 
-    ui->pushButton_Still12M_HDR->setEnabled(false);
+    qstring.setNum(focus_position);
+    ui->lineEdit_FocusPosition->setText(qstring);
+    qstring.setNum(exposure);
+    ui->lineEdit_Exposure->setText(qstring);
+    qstring.setNum(gain);
+    ui->lineEdit_Gain->setText(qstring);
+    qstring.setNum(hdr_ratio);
+    ui->lineEdit_HDR->setText(qstring);
+
     ui->pushButton_Highspeed->setEnabled(false);
 
     sprintf(string, "%s  [sensor-id=%d]", VERSION, GetSensID());
@@ -306,7 +317,7 @@ void MainWindow::on_pushButton_Still12M_NML_clicked()
         ui->radioButton_Macro->setEnabled(true);
     }
 
-    StillCapture(0);
+    StillCapture(0, 0);
 }
 
 /*******************************************************************************
@@ -329,7 +340,7 @@ void MainWindow::on_pushButton_Still12M_HDR_clicked()
         ui->radioButton_Macro->setEnabled(true);
     }
 
-    StillCapture(1);
+    StillCapture(1, ui->lineEdit_HDR->text().toInt());
 }
 
 /*******************************************************************************
@@ -342,4 +353,22 @@ void MainWindow::on_pushButton_Still12M_HDR_clicked()
 void MainWindow::on_pushButton_Highspeed_clicked()
 {
     Highspeed();
+}
+
+/*******************************************************************************
+ * @brief   Exposure/Gain apply clicked on push button
+ *
+ * @param   void
+ *
+ * @return  void
+ ******************************************************************************/
+void MainWindow::on_pushButton_ExposureGainApply_clicked()
+{
+    char command[256];
+
+    sprintf(command, "exposure/gain %d %d",
+        ui->lineEdit_Exposure->text().toInt(),
+        ui->lineEdit_Gain->text().toInt());
+
+    DemoControl(command);
 }

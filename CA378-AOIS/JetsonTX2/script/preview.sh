@@ -3,18 +3,33 @@ ID=$1
 WIDTH=$2
 HEIGHT=$3
 FPS=$4
-if [ $WIDTH = 4056 ] && [ $HEIGHT = 3040 ] && [ $FPS = 30 ]; then
-  gst-launch-1.0 nvcamerasrc sensor-id=${ID} fpsRange="30.0 30.0" wbmode=9 wbManualMode=3 aeLock=true ! 'video/x-raw(memory:NVMM), width=(int)4056, height=(int)3040, framerate=(fraction)30/1' ! nvvidconv flip-method=2 !'video/x-raw, width=(int)1024, height=(int)768, framerate=(fraction)30/1' ! queue ! xvimagesink
-elif [ $WIDTH = 3840 ] && [ $HEIGHT = 2160 ] && [ $FPS = 30 ]; then
-  gst-launch-1.0 nvcamerasrc sensor-id=${ID} fpsRange="30.0 30.0" wbmode=9 wbManualMode=3 aeLock=true ! 'video/x-raw(memory:NVMM), width=(int)3840, height=(int)2160, framerate=(fraction)30/1' ! nvvidconv flip-method=2 !'video/x-raw, width=(int)1024, height=(int)576, framerate=(fraction)30/1' ! queue ! xvimagesink
-elif [ $WIDTH = 1920 ] && [ $HEIGHT = 1080 ] && [ $FPS = 30 ]; then
-  gst-launch-1.0 nvcamerasrc sensor-id=${ID} fpsRange="30.0 30.0" wbmode=9 wbManualMode=3 aeLock=true ! 'video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, framerate=(fraction)30/1' ! nvvidconv flip-method=2 !'video/x-raw, width=(int)1024, height=(int)576, framerate=(fraction)30/1' ! queue ! xvimagesink
-elif [ $WIDTH = 1920 ] && [ $HEIGHT = 1080 ] && [ $FPS = 60 ]; then
-  gst-launch-1.0 nvcamerasrc sensor-id=${ID} fpsRange="60.0 60.0" wbmode=9 wbManualMode=3 aeLock=true ! 'video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, framerate=(fraction)60/1' ! nvvidconv flip-method=2 !'video/x-raw, width=(int)1024, height=(int)576, framerate=(fraction)60/1' ! queue ! xvimagesink
-elif [ $WIDTH = 1920 ] && [ $HEIGHT = 1080 ] && [ $FPS = 120 ]; then
-  gst-launch-1.0 nvcamerasrc sensor-id=${ID} fpsRange="120.0 120.0" wbmode=9 wbManualMode=3 aeLock=true ! 'video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, framerate=(fraction)120/1' ! nvvidconv flip-method=2 !'video/x-raw, width=(int)1024, height=(int)576, framerate=(fraction)120/1' ! queue ! xvimagesink
-elif [ $WIDTH = 640 ] && [ $HEIGHT = 480 ] && [ $FPS = 240 ]; then
-  gst-launch-1.0 nvcamerasrc sensor-id=${ID} fpsRange="240.0 240.0" wbmode=9 wbManualMode=3 aeLock=true ! 'video/x-raw(memory:NVMM), width=(int)640, height=(int)480, framerate=(fraction)240/1' ! nvvidconv flip-method=2 !'video/x-raw, width=(int)640, height=(int)480, framerate=(fraction)240/1' ! queue ! xvimagesink
+
+# Display for 4:3
+DISP43_W=1400
+DISP43_H=`expr ${DISP43_W} \* 3 / 4`
+
+# Display for 16:9
+MONITOR_W=3840
+SPLIT_WINDOW=6
+DISP169_W=`expr \( ${MONITOR_W} - 64 \) / ${SPLIT_WINDOW} / 4 \* 4`
+DISP169_H=`expr ${DISP169_W} \* 9 / 16`
+
+if [ ${WIDTH} = 4056 ] && [ ${HEIGHT} = 3040 ]; then
+  DISP_W=${DISP43_W}
+  DISP_H=${DISP43_H}
+elif [ ${WIDTH} = 3840 ] && [ ${HEIGHT} = 2160 ]; then
+  DISP_W=${DISP169_W}
+  DISP_H=${DISP169_H}
+elif [ ${WIDTH} = 1920 ] && [ ${HEIGHT} = 1080 ]; then
+  DISP_W=${DISP169_W}
+  DISP_H=${DISP169_H}
+elif [ ${WIDTH} = 640 ] && [ ${HEIGHT} = 480 ]; then
+  DISP_W=${WIDTH}
+  DISP_H=${HEIGHT}
 else
   echo Not Supported Mode!
 fi
+
+gst-launch-1.0 nvcamerasrc sensor-id=${ID} fpsRange="${FPS}.0 ${FPS}.0" wbmode=9 wbManualMode=3 aeLock=true \
+ ! "video/x-raw(memory:NVMM), width=(int)${WIDTH}, height=(int)${HEIGHT}, framerate=(fraction)${FPS}/1" ! nvvidconv flip-method=2 \
+ ! "video/x-raw, width=(int)${DISP_W}, height=(int)${DISP_H}, framerate=(fraction)${FPS}/1" ! queue ! xvimagesink
