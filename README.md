@@ -1,5 +1,10 @@
 ## C Program examples
 
+### CA378-AOIS Sample code for Jetson Nano
+
+[CA378-AOIS Sample code v1.0.0 for Jetson Nano (L4T 32.1)](https://github.com/centuryarks/Sample/releases/download/JSNano_v1.0.0_L4T32.1(Jetpack4.2)/demo_v1.0.0_nano.tar.gz)
+- Support for Jetpack 4.2
+
 ### CA378-AOIS Sample code for Jetson TX2
 
 [CA378-AOIS Sample code v1.1.5 for Jetson TX2 (L4T 28.2/L4T 28.2.1)](https://github.com/centuryarks/Sample/releases/download/JSX2_v1.1.5(Jetpack3.2.1%2FJetpack3.3)/demo_v1.1.5_tx2.tar.gz)
