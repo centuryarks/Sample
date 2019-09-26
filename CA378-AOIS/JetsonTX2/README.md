@@ -15,3 +15,4 @@ This is CA378-AOIS sample code.
   - Binning mode bug fix
   - HDR compatible
   - Support for Jetpack 3.2.1 / Jetpack 3.3
+- **2019/09/27** - v1.2.0: Support for Jetpack 4.2

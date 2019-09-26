@@ -21,7 +21,7 @@ touch demo.sh
 echo '#'!/bin/sh>>demo.sh
 echo ID='$1'>>demo.sh
 echo cd ${PWD}>>demo.sh
-echo sudo ./bin/DemoGUI -id '$ID' -w 4056 -h 3040 -fps 30>>demo.sh
+echo sudo ./bin/DemoGUI -id '$ID' -w 4032 -h 3040 -fps 30>>demo.sh
 mv demo.sh ./script/
 
 # make DEMO.desktop
@@ -29,7 +29,7 @@ touch DEMO.desktop
 echo [Desktop Entry]>>DEMO.desktop
 echo Keywords=Drivers';'>>DEMO.desktop
 echo Exec=gnome-terminal --geometry=120x32+0+0 --command ${PWD}/script/"'demo.sh 0'">>DEMO.desktop
-echo Icon=/usr/share/app-install/icons/dispcalGUI-testchart-editor.png>>DEMO.desktop
+echo Icon=${PWD}/appicon.png>>DEMO.desktop
 echo Terminal=false>>DEMO.desktop
 echo Type=Application>>DEMO.desktop
 echo NotShownIn=GNOME';'Unity';'KDE';'>>DEMO.desktop
@@ -44,7 +44,7 @@ touch DEMO6.desktop
 echo [Desktop Entry]>>DEMO6.desktop
 echo Keywords=Drivers';'>>DEMO6.desktop
 echo Exec=gnome-terminal --geometry=120x32+3000+2000 --command ${PWD}/script/"'demo6.sh'">>DEMO6.desktop
-echo Icon=/usr/share/app-install/icons/whichwayisup.png>>DEMO6.desktop
+echo Icon=${PWD}/appicon.png>>DEMO6.desktop
 echo Terminal=false>>DEMO6.desktop
 echo Type=Application>>DEMO6.desktop
 echo NotShownIn=GNOME';'Unity';'KDE';'>>DEMO6.desktop

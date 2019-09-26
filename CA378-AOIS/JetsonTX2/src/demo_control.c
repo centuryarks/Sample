@@ -207,7 +207,7 @@ int DemoControl(char *commandLine)
         sscanf(commandLine, "%s %d %d", command, &g_exposure, &g_gain);
 
         printf("Exposure:%d, Gain:%d\n", g_exposure, g_gain);
-        sprintf(command, "v4l2-ctl -d /dev/video%d --set-ctrl coarse_time=%d --set-ctrl gain=%d",
+        sprintf(command, "v4l2-ctl -d /dev/video%d --set-ctrl exposure=%d --set-ctrl gain=%d",
             g_sensor_id, g_exposure, g_gain * 256 / 100);
         ret = system(command);
         if (ret != 0)
@@ -471,7 +471,7 @@ int MessageQueueSend(char *message)
 
     if (strcmp(message, "quit") == 0)
     {
-        sprintf(command, "pgrep -f 'gst-launch-1.0 nvcamerasrc sensor-id=%d' | xargs sudo kill -13", g_sensor_id);
+        sprintf(command, "pgrep -f 'gst-launch-1.0 nvarguscamerasrc sensor-id=%d' | xargs sudo kill -13", g_sensor_id);
         ret = system(command);
         if (ret != 13)
         {

@@ -14,7 +14,7 @@ SPLIT_WINDOW=6
 DISP169_W=`expr \( ${MONITOR_W} - 64 \) / ${SPLIT_WINDOW} / 4 \* 4`
 DISP169_H=`expr ${DISP169_W} \* 9 / 16`
 
-if [ ${WIDTH} = 4056 ] && [ ${HEIGHT} = 3040 ]; then
+if [ ${WIDTH} = 4032 ] && [ ${HEIGHT} = 3040 ]; then
   DISP_W=${DISP43_W}
   DISP_H=${DISP43_H}
 elif [ ${WIDTH} = 3840 ] && [ ${HEIGHT} = 2160 ]; then
@@ -30,6 +30,6 @@ else
   echo Not Supported Mode!
 fi
 
-gst-launch-1.0 nvcamerasrc sensor-id=${ID} fpsRange="${FPS}.0 ${FPS}.0" wbmode=9 wbManualMode=3 aeLock=true \
+gst-launch-1.0 nvarguscamerasrc sensor-id=${ID} maxperf=true wbmode=9 awblock=false aelock=true \
  ! "video/x-raw(memory:NVMM), width=(int)${WIDTH}, height=(int)${HEIGHT}, framerate=(fraction)${FPS}/1" ! nvvidconv flip-method=2 \
  ! "video/x-raw, width=(int)${DISP_W}, height=(int)${DISP_H}, framerate=(fraction)${FPS}/1" ! queue ! xvimagesink

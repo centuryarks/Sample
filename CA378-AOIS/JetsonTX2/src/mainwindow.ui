@@ -270,16 +270,26 @@
      <layout class="QHBoxLayout" name="horizontalLayout_9">
       <item>
        <widget class="QLabel" name="label_5">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;HDR ratio:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="lineEdit_HDR"/>
+       <widget class="QLineEdit" name="lineEdit_HDR">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QPushButton" name="pushButton_Still12M_HDR">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>12M HDR</string>
         </property>
