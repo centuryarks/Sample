@@ -1,5 +1,10 @@
 ## C Program examples
 
+### CA378-AOIS Sample code for Tinker Board
+
+[CA378-AOIS Sample code v1.0.0 for Tinker Board (TinkerOS Debian9 v2.0.8)](https://github.com/centuryarks/Sample/releases/download/TINKER_v1.0.0_v4.4.132(Debian9_v2.0.8)/demo_v1.0.0_tinker.tar.gz)
+- Support for TinkerOS Debian9 v2.0.8 (Kernel v4.4.132)
+
 ### CA378-AOIS Sample code for Jetson Nano
 
 [CA378-AOIS Sample code v1.0.0 for Jetson Nano (L4T 32.1)](https://github.com/centuryarks/Sample/releases/download/JSNano_v1.0.0_L4T32.1(Jetpack4.2)/demo_v1.0.0_nano.tar.gz)
