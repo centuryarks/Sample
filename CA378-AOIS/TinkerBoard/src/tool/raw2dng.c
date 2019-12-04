@@ -198,7 +198,7 @@ int main (int argc, char **argv)
     TIFFSetField (tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
     TIFFSetField (tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
     TIFFSetField (tif, TIFFTAG_CFAREPEATPATTERNDIM, CFARepeatPatternDim);
-    TIFFSetField (tif, TIFFTAG_CFAPATTERN, 4, "\00\01\01\02");
+    TIFFSetField (tif, TIFFTAG_CFAPATTERN, 4, "\02\01\01\00");
     TIFFSetField (tif, TIFFTAG_MAKE, "CenturyArks");
     TIFFSetField (tif, TIFFTAG_UNIQUECAMERAMODEL, "CA378-AOIS");
     TIFFSetField (tif, TIFFTAG_COLORMATRIX1, 9, cam_xyz);
