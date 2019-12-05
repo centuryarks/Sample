@@ -14,6 +14,13 @@ cd /home/linaro/demo
 #media-ctl -d /dev/media0 --set-v4l2 '"rkisp1-isp-subdev":0[fmt:SBGGR10/1920x1080]' --set-v4l2 '"rkisp1-isp-subdev":0[crop:(0,0)/1920x1080]'
 #media-ctl -d /dev/media0 --set-v4l2 '"rkisp1-isp-subdev":2[fmt:SBGGR10/1920x1080]' #source
 #media-ctl -d /dev/media0 --set-v4l2 '"rkisp1-isp-subdev":2[fmt:SBGGR10/1920x1080]' --set-v4l2 '"rkisp1-isp-subdev":2[crop:(0,0)/1920x1080]'
+#W=3840
+#H=2160
+#media-ctl -d /dev/media0 --set-v4l2 '"imx378 2-001a":0[fmt:SBGGR10/3840x2160]'
+#media-ctl -d /dev/media0 --set-v4l2 '"rkisp1-isp-subdev":0[fmt:SBGGR10/3840x2160]' #sink
+#media-ctl -d /dev/media0 --set-v4l2 '"rkisp1-isp-subdev":0[fmt:SBGGR10/3840x2160]' --set-v4l2 '"rkisp1-isp-subdev":0[crop:(0,0)/3840x2160]'
+#media-ctl -d /dev/media0 --set-v4l2 '"rkisp1-isp-subdev":2[fmt:SBGGR10/3840x2160]' #source
+#media-ctl -d /dev/media0 --set-v4l2 '"rkisp1-isp-subdev":2[fmt:SBGGR10/3840x2160]' --set-v4l2 '"rkisp1-isp-subdev":2[crop:(0,0)/3840x2160]'
 W=4032
 H=3040
 media-ctl -d /dev/media0 --set-v4l2 '"imx378 2-001a":0[fmt:SBGGR10_1X10/4032x3040]'
