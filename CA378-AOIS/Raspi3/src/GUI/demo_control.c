@@ -51,12 +51,20 @@ int g_width;
 int g_height;
 int g_sensor_id;
 int g_fps;
+int g_gain;
+int g_exposure;
 char PathPreview[PATH_MAX]      = "/home/pi/demo/script/preview.sh";
 char PathStill12M_NML[PATH_MAX] = "/home/pi/demo/script/stillCapture12M_Normal.sh";
 char PathStill12M_HDR[PATH_MAX] = "/home/pi/demo/script/stillCapture12M_HDR.sh";
 char PathHighspeed[PATH_MAX]    = "/home/pi/demo/script/highspeed.sh";
 int StillCaptureFrame = 10;
 
+
+/***************************************************************
+ *  Property
+ **************************************************************/
+int GetExposure() { return g_exposure;  }
+int GetGain()     { return g_gain;      }
 
 /*******************************************************************************
  * @brief   Initialize Demo software
@@ -83,7 +91,7 @@ int DemoInit()
 
     ReadSettingFile();
 
-    sprintf(command, "%s &", PathPreview);
+    sprintf(command, "%s %d %d &", PathPreview, g_gain, g_exposure);
     system(command);
     WaitStreaming();
 
@@ -105,6 +113,8 @@ int DemoExit()
     usleep(1000 * 1000);
 
     StopStreaming();
+
+    WriteSettingFile();
 
     return 1;
 }
@@ -182,6 +192,19 @@ int DemoControl(char *commandLine)
 
         OIS_Mode(mode);
     }
+    else if (strstr(commandLine, "exposure/gain") != 0)
+    {
+        sscanf(commandLine, "%s %d %d", command, &g_exposure, &g_gain);
+
+        printf("Exposure:%d, Gain:%d\n", g_exposure, g_gain);
+
+        MessageQueueSend("q");
+        usleep(1000 * 1000);
+
+        sprintf(command, "%s %d %d &", PathPreview, g_gain, g_exposure);
+        system(command);
+        WaitStreaming();
+    }
     else
     {
         printf("bad command!\n");
@@ -233,6 +256,14 @@ int ReadSettingFile()
                         {
                             StillCaptureFrame = atoi(p);
                         }
+                        else if (strcmp(itemName, "gain") == 0)
+                        {
+                            g_gain = atoi(p);
+                        }
+                        else if (strcmp(itemName, "exposure") == 0)
+                        {
+                            g_exposure = atoi(p);
+                        }
                         break;
                     default:
                         break;
@@ -242,6 +273,68 @@ int ReadSettingFile()
             }
         }
 
+        fclose(fp);
+    }
+
+    return 1;
+}
+
+/*******************************************************************************
+ * @brief   Write setting file
+ *
+ * @param   void
+ *
+ * @return  Success 1
+ ******************************************************************************/
+int WriteSettingFile()
+{
+    FILE *fp;
+    char buf[LINEBUF_MAX*LINEBUF_MAX];
+    char lineBuf[LINEBUF_MAX];
+    char itemName[LINEBUF_MAX];
+    int i, lineCount = 0;
+
+    printf("WriteSettingFile\n");
+
+    if ((fp = fopen("./bin/demo.ini", "r")) != NULL) {
+        while ( fgets(&buf[LINEBUF_MAX * lineCount], LINEBUF_MAX, fp) != NULL ) {
+            lineCount++;
+        }
+        fclose(fp);
+    }
+
+    if ((fp = fopen("./bin/demo.ini", "w")) != NULL) {
+        for (i = 0; i < lineCount; i++) {
+            strcpy(lineBuf, &buf[LINEBUF_MAX * i]);
+            char *p = strtok(lineBuf, "= \r\n");
+            int n = 0;
+            while (p)
+            {
+                switch (n)
+                {
+                    case 0:
+                        strcpy(itemName, p);
+                        break;
+                    case 1:
+                        if (strcmp(itemName, "exposure") == 0)
+                        {
+                            sprintf(&buf[LINEBUF_MAX * i], "exposure=%d\n", g_exposure);
+                            printf("Exposure:%d\n", g_exposure);
+                        }
+                        else if (strcmp(itemName, "gain") == 0)
+                        {
+                            sprintf(&buf[LINEBUF_MAX * i], "gain=%d\n", g_gain);
+                            printf("Gain:%d\n", g_gain);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                n++;
+                p = strtok(NULL, "= \r\n");
+            }
+            fprintf(fp, "%s", &buf[LINEBUF_MAX * i]);
+        }
         fclose(fp);
     }
 
@@ -284,7 +377,8 @@ int StillCapture(int mode)
     printf("Finish StillCapture\n");
 
 finish:
-    sprintf(command, "lxterminal --command=%s", PathPreview);
+    sprintf(command, "lxterminal --command=\"%s %d %d\"", PathPreview, g_gain, g_exposure);
+    //sprintf(command, "lxterminal --command=%s", PathPreview);
     system(command);
     WaitStreaming();
     printf("Focus Position:%d\n", GetAfPosition());
@@ -367,7 +461,7 @@ void *StillThread(void *arg)
     switch (mode)
     {
         case 0:
-            sprintf(command, "%s %d", PathStill12M_NML, StillCaptureFrame);
+            sprintf(command, "%s %d %d %d", PathStill12M_NML, StillCaptureFrame, g_gain, g_exposure);
             system(command);
             break;
         case 1:

@@ -1,6 +1,16 @@
 --- stillsampleRAW16.c	2017-09-03 11:19:47.000000000 +0900
-+++ stillsampleRAW16.c	2017-12-20 10:00:00.000000000 +0900
-@@ -37,7 +37,7 @@
++++ stillsampleRAW16.c	2020-02-05 10:00:00.000000000 +0900
+@@ -14,6 +14,9 @@
+ 
+ #include <sys/time.h>
+ 
++int __CCIRegWrite(struct ssp_handle *handle, int address, int data);
++int __CCIRegRead(struct ssp_handle *handle, int address, int *data);
++
+ static int frame_count;
+ 
+ int stop_process;
+@@ -37,7 +40,7 @@
  }
  
  char *filename;
@@ -9,7 +19,7 @@
  void fame_preprocess(struct ssp_handle *handle, struct ssp_frame *frame){
    //  printf("Preprocess is active. frame_count = %d\n", frame_count);
    frame_count ++;
-@@ -78,7 +78,9 @@
+@@ -78,7 +81,9 @@
  
    profile_filename = argv[1];
    filename = argv[2];
@@ -20,3 +30,35 @@
    
    stop_process = 0;
    if (signal(SIGINT, signal_handler) == SIG_ERR)
+@@ -120,6 +125,31 @@
+     }
+ 
+     printf("Initialize done.\n");
++
++    int analog_gain = 100;
++    int exposure = 1000;
++    int RegVal;
++
++    // analog gain
++    if (argc >= 5) {
++      analog_gain = atoi(argv[4]);
++    }
++    printf("param:analog_gain=%d\n", analog_gain);
++    RegVal = (analog_gain & 0xff00) >> 8;
++    __CCIRegWrite(handle, 0x204, RegVal);
++    RegVal = (analog_gain & 0x00ff); 
++    __CCIRegWrite(handle, 0x205, RegVal);
++
++    // exposure
++    if (argc >= 6) {
++      exposure = atoi(argv[5]);
++    }
++    printf("param:exposure=%d\n", exposure);
++    RegVal = (exposure & 0xff00) >> 8; 
++    __CCIRegWrite(handle, 0x202, RegVal);
++    RegVal = (exposure & 0x00ff); 
++    __CCIRegWrite(handle, 0x203, RegVal);
++
+     printf("start streaming\n");
+     if((retval = ssp_start_streaming(handle)) != SSP_SUCCESS){
+ 	

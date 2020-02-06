@@ -50,6 +50,7 @@ int DemoInit();
 int DemoExit();
 int DemoControl(char *commandLine);
 int ReadSettingFile();
+int WriteSettingFile();
 int StillCapture(int mode);
 void StillCaptureMode(int mode);
 int Highspeed();
@@ -58,6 +59,12 @@ void *AFCThread(void *arg);
 void *StillThread(void *arg);
 int WaitStreaming();
 
+
+/***************************************************************
+ *  Property
+ **************************************************************/
+int GetExposure();
+int GetGain();
 
 /*******************************************************************************
  * @brief   Read CCI register by slave address

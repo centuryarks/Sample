@@ -43,17 +43,27 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    QString qstring;
+
     DemoInit();
 
     focus_mode  = FOCUS_MODE_DIRECT;
     ois_mode = 0;
     focus_position = 512;
     af_on = 0;
+    exposure = GetExposure();
+    gain = GetGain();
 
     ui->setupUi(this);
     ui->radioButton_Direct->setChecked(true);
     ui->radioButton_OIS_Mode0->setChecked(true);
-    ui->lineEdit_FocusPosition->setText("512");
+
+    qstring.setNum(focus_position);
+    ui->lineEdit_FocusPosition->setText(qstring);
+    qstring.setNum(exposure);
+    ui->lineEdit_Exposure->setText(qstring);
+    qstring.setNum(gain);
+    ui->lineEdit_Gain->setText(qstring);
 
     this->setWindowTitle(VERSION);
 }
@@ -338,4 +348,22 @@ void MainWindow::on_pushButton_Still12M_HDR_clicked()
 
     setWindowState(windowState() ^ Qt::WindowMinimized);
     show();
+}
+
+/*******************************************************************************
+ * @brief   Exposure/Gain apply clicked on push button
+ *
+ * @param   void
+ *
+ * @return  void
+ ******************************************************************************/
+void MainWindow::on_pushButton_ExposureGainApply_clicked()
+{
+    char command[256];
+
+    sprintf(command, "exposure/gain %d %d",
+        ui->lineEdit_Exposure->text().toInt(),
+        ui->lineEdit_Gain->text().toInt());
+
+    DemoControl(command);
 }

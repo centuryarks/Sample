@@ -35,7 +35,7 @@ either expressed or implied, of the FreeBSD Project.
 /***************************************************************
  *  Defines for Main window
  **************************************************************/
-#define VERSION     "CA378-AOIS  Demo  ver 1.0.0"
+#define VERSION     "CA378-AOIS  Demo  ver 1.0.5"
 #define STR_MAX     256
 
 enum E_FOCUS_MODE
@@ -54,6 +54,8 @@ int DemoInit();
 int DemoExit();
 int DemoControl(char *commandLine);
 int StillCapture(int mode);
+int GetExposure();
+int GetGain();
 }
 
 /***************************************************************
@@ -89,6 +91,7 @@ private slots:
     void on_checkBox_LSC_clicked(bool checked);
     void on_pushButton_Still12M_NML_clicked();
     void on_pushButton_Still12M_HDR_clicked();
+    void on_pushButton_ExposureGainApply_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -96,6 +99,8 @@ private:
     int focus_mode;
     int ois_mode;
     int af_on;
+    int exposure;
+    int gain;
 };
 
 #endif // MAINWINDOW_H

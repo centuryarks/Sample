@@ -12,6 +12,8 @@ echo gyroGainRateY=1.00>>demo.ini
 echo autoFocusGain=2.0>>demo.ini
 echo autoFocusConfidenceThreshold=10>>demo.ini
 echo autoFocusMoveLimit=100>>demo.ini
+echo gain=896>>demo.ini
+echo exposure=2000>>demo.ini
 mv demo.ini ./bin/
 
 # make demo script

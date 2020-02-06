@@ -11,9 +11,9 @@ cd ../tool/
 make
 mv raw2dng ../../bin/
 mv raw2hdr ../../bin/
-cd ../ssp/
 
 # make viewer
+cd ../ssp/
 if [ -f ~/highspeed/highspeed.c ]; then
   cp ~/highspeed/highspeed.c ./
   patch < highspeed.patch
