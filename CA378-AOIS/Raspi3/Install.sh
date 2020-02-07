@@ -35,7 +35,7 @@ mv highspeed.sh ./script/
 touch preview.sh
 echo '#'!/bin/sh>>preview.sh
 echo cd ${PWD}>>preview.sh
-echo ./bin/highspeed ./profile/IMX378_640x480_4x4.xml 896 256 2000 IMX378>>preview.sh
+echo ./bin/highspeed ./profile/IMX378_640x480_4x4.xml '$'1 256 '$'2 IMX378>>preview.sh
 mv preview.sh ./script/
 
 # make Still Capture 12M Normal
