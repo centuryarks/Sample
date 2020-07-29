@@ -47,7 +47,7 @@ int dccCount                     = 0;
 double dccAve                    = 0.0;
 double lastDccAve                = 9999.0;
 double posAve                    = 0.0;
-double AutoFocusGain             = 20.0;
+double AutoFocusGain             = 2.0;
 int AutoFocusMoveLimit           = 100;
 int AutoFocusConfidenceThreshold = 10;
 int AutoFocusAverageNum          = 5;
@@ -174,7 +174,7 @@ void AFControl(int pdafWidth, int pdafHeight)
         dccCount = 0;
     }
 
-    if ((dccAve * dccAve) < (lastDccAve * lastDccAve))
+    if ((dccAve * dccAve) != (lastDccAve * lastDccAve))
     {
         /*
         printf("Phase Difference:\n");
@@ -232,7 +232,7 @@ void AFControl(int pdafWidth, int pdafHeight)
         if (dcc >  AutoFocusMoveLimit) dcc =  AutoFocusMoveLimit;
         if (dcc < -AutoFocusMoveLimit) dcc = -AutoFocusMoveLimit;
 
-        afPosition -= dcc;
+        afPosition += dcc;
         if (afPosition < 0x000) afPosition = 0x000;
         if (afPosition > 0x3FF) afPosition = 0x3FF;
         DirectMove(afPosition);
@@ -482,9 +482,9 @@ int ReadAFSettingFile()
                         {
                             AutoFocusMoveLimit = atoi(p);
                         }
-                        else if (strcmp(itemName, "AutoFocusAverageNum") == 0)
+                        else if (strcmp(itemName, "autoFocusAverageNum") == 0)
                         {
-                            AutoFocusMoveLimit = atoi(p);
+                            AutoFocusAverageNum = atoi(p);
                         }
                         break;
                     default:
