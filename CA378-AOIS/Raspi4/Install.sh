@@ -5,7 +5,7 @@ touch demo.ini
 echo '#' DEMO Setting>>demo.ini
 echo preview=${PWD}/script/preview.sh>>demo.ini
 echo stillCapture=${PWD}/script/stillCapture.sh>>demo.ini
-echo tuning-file=${PWD}/tuning-file/imx378-20230519_v2.json>>demo.ini
+echo tuning-file=${PWD}/tuning-file/imx378-20231108_v2.json>>demo.ini
 echo gyroGainRateX=1.00>>demo.ini
 echo gyroGainRateY=1.00>>demo.ini
 echo autoFocusGain=2.0>>demo.ini

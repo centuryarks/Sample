@@ -37,7 +37,7 @@ either expressed or implied, of the FreeBSD Project.
 /***************************************************************
  *  Defines for Main window
  **************************************************************/
-#define VERSION     "CA378-AOIS  Demo  ver 1.0.0"
+#define VERSION     "CA378-AOIS  Demo  ver 1.0.1"
 
 enum E_FOCUS_MODE
 {
