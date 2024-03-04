@@ -46,6 +46,13 @@ either expressed or implied, of the FreeBSD Project.
 #define DEMO_PATH_MAX   (128)
 #define UNUSED(x)       ((void)(x))
 
+enum E_LENS_ID
+{
+    LENS_V1 = 0,
+    LENS_V2,
+    LENS_V2_WIDE
+};
+
 /***************************************************************
  *  Declare function for DEMO Control
  **************************************************************/
@@ -78,6 +85,13 @@ double GetSaturation();
 double GetEvCompensation();
 double GetRedGain();
 double GetBlueGain();
+void GetTuningFile(char *tuning_file);
+int GetRotationIndex();
+void GetProductName(char *product_name);
+int ExistsAFDriver();
+int IsAFDriverV1();
+int IsAFDriverV2();
+
 
 /*******************************************************************************
  * @brief   Read CCI register by slave address
@@ -88,24 +102,15 @@ double GetBlueGain();
  *
  * @return  Read byte 1
  ******************************************************************************/
-int __CCIRegReadBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data)
+int __CCIRegReadBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data)
 {
-    unsigned char writeAddr[2];
+    u8 writeAddr[2];
 
     i2c_dev_t i2c_dev = GetI2cDev();
 
     writeAddr[0] = RegAddress >> 8;
     writeAddr[1] = RegAddress & 0xFF;
     i2c_read(i2c_dev, CCISlaveAddress, writeAddr, 2, data, 1);
-
-#if AF_TEST
-    printf("R:%04X:", RegAddress);
-    for (int i = 0; i < 1; i++)
-    {
-        printf("%02X ", data[i]);
-    }
-    printf("\r\n");
-#endif
 
     return 1;
 }
@@ -119,9 +124,9 @@ int __CCIRegReadBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned cha
  *
  * @return  Write byte 1
  ******************************************************************************/
-int __CCIRegWriteBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char data)
+int __CCIRegWriteBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 data)
 {
-    unsigned char writeData[3];
+    u8 writeData[3];
     s32 ret;
 
     i2c_dev_t i2c_dev = GetI2cDev();
@@ -134,15 +139,6 @@ int __CCIRegWriteBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned ch
     {
         return 0;
     }
-
-#if AF_TEST
-    printf("W:%04X:", RegAddress);
-    for (int i = 0; i < 1; i++)
-    {
-        printf("%02X ", data);
-    }
-    printf("\r\n");
-#endif
 
     return 1;
 }
@@ -157,15 +153,17 @@ int __CCIRegWriteBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned ch
  *
  * @return  Read bytes
  ******************************************************************************/
-int __CCIRegReadMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data, int size)
+int __CCIRegReadMBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data, int size)
 {
-    unsigned char writeAddr[2];
+    u8 writeAddr[2];
     int i;
 
     i2c_dev_t i2c_dev = GetI2cDev();
 
-    if (CCISlaveAddress == CCI_SLAVE_ADDR ||
-        CCISlaveAddress == AFDRV_I2C_ADDR)
+    if (CCISlaveAddress == IMX378_I2C_ADDR ||
+        CCISlaveAddress == IMX378_I2C_ADDR_V2WIDE ||
+        CCISlaveAddress == AFDRV_I2C_ADDR_V1 ||
+        CCISlaveAddress == AFDRV_I2C_ADDR_V2)
     {
         writeAddr[0] = RegAddress >> 8;
         writeAddr[1] = RegAddress & 0xFF;
@@ -181,15 +179,6 @@ int __CCIRegReadMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned ch
         }
     }
 
-#if AF_TEST
-    printf("R:%04X:", RegAddress);
-    for (i = 0; i < size; i++)
-    {
-        printf("%02X ", data[i]);
-    }
-    printf("\r\n");
-#endif
-
     return size;
 }
 
@@ -203,34 +192,42 @@ int __CCIRegReadMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned ch
  *
  * @return  Write bytes
  ******************************************************************************/
-int __CCIRegWriteMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data, int size)
+int __CCIRegWriteMBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data, int size)
 {
-    unsigned char writeData[3];
+    u8 writeData[2+1024*2];
     int i;
     s32 ret;
 
     i2c_dev_t i2c_dev = GetI2cDev();
 
-    for (i = 0; i < size; i++)
+    if (CCISlaveAddress == AFDRV_I2C_ADDR_V2)
     {
-        writeData[0] = (RegAddress + i) >> 8;
-        writeData[1] = (RegAddress + i) & 0xFF;
-        writeData[2] = data[i];
-        ret = i2c_write(i2c_dev, CCISlaveAddress, writeData, 3);
+        writeData[0] = RegAddress >> 8;
+        writeData[1] = RegAddress & 0xFF;
+        for (i = 0; i < size; i++)
+        {
+            writeData[2+i] = data[i];
+        }
+        ret = i2c_write(i2c_dev, CCISlaveAddress, writeData, 2+size);
         if (ret != COMMUNICATION_SUCCESS)
         {
             return 0;
         }
     }
-
-#if AF_TEST
-    printf("R:%04X:", RegAddress);
-    for (i = 0; i < size; i++)
+    else
     {
-        printf("%02X ", data[i]);
+        for (i = 0; i < size; i++)
+        {
+            writeData[0] = (RegAddress + i) >> 8;
+            writeData[1] = (RegAddress + i) & 0xFF;
+            writeData[2] = data[i];
+            ret = i2c_write(i2c_dev, CCISlaveAddress, writeData, 3);
+            if (ret != COMMUNICATION_SUCCESS)
+            {
+                return 0;
+            }
+        }
     }
-    printf("\r\n");
-#endif
 
     return size;
 }
@@ -245,9 +242,9 @@ int __CCIRegWriteMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned c
  *
  * @return  Read bytes
  ******************************************************************************/
-int __RegRead1ByteAddress(int SlaveAddress, int RegAddress, unsigned char *data, int size)
+int __RegRead1ByteAddress(int SlaveAddress, int RegAddress, u8 *data, int size)
 {
-    unsigned char writeAddr[1];
+    u8 writeAddr[1];
     int i;
 
     i2c_dev_t i2c_dev = GetI2cDev();
@@ -259,6 +256,67 @@ int __RegRead1ByteAddress(int SlaveAddress, int RegAddress, unsigned char *data,
     }
 
     return size;
+}
+
+/*******************************************************************************
+ * @brief   Read 16 bit address / 16 bit data register
+ *
+ * @param   addr    Register address
+ * @param   data    Read data
+ *
+ * @return  Read bytes
+ ******************************************************************************/
+int __CCIRegRead16bit(u16 addr, u16* data)
+{
+    int ret = 0;
+    u16 r_dat;
+    ret = __CCIRegReadMBySlaveAddress(AFDRV_I2C_ADDR_V2, addr, (u8 *) &r_dat, 2);
+    *data = ((u8)(r_dat >> 8) & 0xff) + ((u8)(r_dat & 0xff) << 8);
+    return ret;
+}
+
+/*******************************************************************************
+ * @brief   Write 16 bit address / 16 bit data register
+ *
+ * @param   addr    Register address
+ * @param   data    Write data
+ *
+ * @return  Write bytes
+ ******************************************************************************/
+int __CCIRegWrite16bit(u16 addr, u16 data)
+{
+    int ret = 0;
+    u8 regdata_array[2] = { 0x00, 0x00 };
+    regdata_array[0] = data >> 8;
+    regdata_array[1] = data & 0xFF;
+    ret = __CCIRegWriteMBySlaveAddress(AFDRV_I2C_ADDR_V2, addr, regdata_array, 2);
+    return ret;
+}
+
+/*******************************************************************************
+ * @brief   Block write 16 bit address / 16 bit data register
+ *
+ * @param   addr        Register address
+ * @param   data        Write data
+ * @param   datalen     Write data length
+ *
+ * @return  Write bytes
+ ******************************************************************************/
+int __CCIBlockWrite16bit(u16 addr, u16 *data, u16 datalen)
+{
+    int ret = 0;
+    int i;
+    union data_buffer {
+        u8 cr[1024*2];
+        u16 st[1024];
+    } databuff;
+
+    for (i = 0; i < datalen; i++) {
+        databuff.st[i] = data[i];
+    }
+
+    ret = __CCIRegWriteMBySlaveAddress(AFDRV_I2C_ADDR_V2, addr, databuff.cr, datalen*2);
+    return ret;
 }
 
 #endif

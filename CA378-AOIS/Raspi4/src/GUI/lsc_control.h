@@ -31,26 +31,29 @@ either expressed or implied, of the FreeBSD Project.
 #define __LSC_CONTROL_H__
 
 #include "slave_address.h"
-
+#include "types_util.h"
 
 /***************************************************************
  *  Defines for LSC Control
  **************************************************************/
-#define FOCAL_LENGTH        (4.52)
+#define FOCAL_LENGTH_V1     (4.52)
+#define FOCAL_LENGTH_V2     (4.266)
+#define FOCAL_LENGTH_V2WIDE (2.75)
+#define FOCAL_LENGTH(x)     ((x) == 0 ? (FOCAL_LENGTH_V1) : ((x) == 1 ? (FOCAL_LENGTH_V2) : (FOCAL_LENGTH_V2WIDE)))
 #define PIXEL_SIZE          (0.00155)
 #define LENS_FACTOR         (4.0)
 
 /***************************************************************
  *  Extern function for LSC
  **************************************************************/
-extern int __CCIRegReadBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data);
-extern int __CCIRegWriteBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char data);
-extern int __CCIRegReadMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data, int size);
-extern int __CCIRegWriteMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data, int size);
+extern int __CCIRegReadBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data);
+extern int __CCIRegWriteBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 data);
+extern int __CCIRegReadMBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data, int size);
+extern int __CCIRegWriteMBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data, int size);
 
 /***************************************************************
  *  Declare function for LSC Control
  **************************************************************/
-void SetLSC(int enable);
+void SetLSC(int enable, int lensId, int sensorSlaveId);
 
 #endif

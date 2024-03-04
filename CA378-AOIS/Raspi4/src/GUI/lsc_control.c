@@ -37,13 +37,15 @@ either expressed or implied, of the FreeBSD Project.
 /*******************************************************************************
  * @brief   Set Lens Shading Control (LSC)
  *
- * @param   enable  Enable LSC
+ * @param   enable              Enable LSC
+ * @param   lensId              Lens Id
+ * @param   sensorSlaveId       Sensor Slave Id
  *
  * @return  void
  ******************************************************************************/
-void SetLSC(int enable)
+void SetLSC(int enable, int lensId, int sensorSlaveId)
 {
-    unsigned char writeData[0x2];
+    u8 writeData[0x2];
     int LscTable[48];
     int addr;
     int x, y, i, color;
@@ -57,14 +59,14 @@ void SetLSC(int enable)
     {
         // calculate cos4 law
         dis = 0.5 * knotPitch * PIXEL_SIZE;
-        theta = cos(atan(dis / FOCAL_LENGTH));
+        theta = cos(atan(dis / FOCAL_LENGTH(lensId)));
         max = pow(theta, LENS_FACTOR);
         for (y = 0; y < 6; y++)
         {
             for (x = 0; x < 8; x++)
             {
                 dis = sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) * knotPitch * PIXEL_SIZE;
-                theta = cos(atan(dis / FOCAL_LENGTH));
+                theta = cos(atan(dis / FOCAL_LENGTH(lensId)));
                 result = max / pow(theta, LENS_FACTOR);
                 LscTable[index++] = (int)(result * 256);
             }
@@ -78,7 +80,7 @@ void SetLSC(int enable)
                 writeData[0] = (LscTable[i] >> 8) & 0x3;
                 writeData[1] = LscTable[i] & 0xFF;
                 addr = 0xab00 + (color * 48 + i) * 2;
-                if (__CCIRegWriteMBySlaveAddress(CCI_SLAVE_ADDR, addr, writeData, 2) != 2)
+                if (__CCIRegWriteMBySlaveAddress(CCI_SLAVE_ADDR(sensorSlaveId), addr, writeData, 2) != 2)
                 {
                     printf("error!\n");
                 }
@@ -88,7 +90,7 @@ void SetLSC(int enable)
         // Shading Correction Enable
         addr = 0x0b00;
         writeData[0] = 1;
-        if (__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR, addr, writeData[0]) != 1)
+        if (__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR(sensorSlaveId), addr, writeData[0]) != 1)
         {
             printf("error!\n");
         }
@@ -96,7 +98,7 @@ void SetLSC(int enable)
         // Manual mode
         addr = 0x3804;
         writeData[0] = 3;
-        if (__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR, addr, writeData[0]) != 1)
+        if (__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR(sensorSlaveId), addr, writeData[0]) != 1)
         {
             printf("error!\n");
         }
@@ -106,7 +108,7 @@ void SetLSC(int enable)
         // Shading Correction Disable
         addr = 0x0b00;
         writeData[0] = 0;
-        if (__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR, addr, writeData[0]) != 1)
+        if (__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR(sensorSlaveId), addr, writeData[0]) != 1)
         {
             printf("error!\n");
         }

@@ -31,36 +31,129 @@ either expressed or implied, of the FreeBSD Project.
 #define __OIS_CONTROL_H__
 
 #include "slave_address.h"
-
+#include "types_util.h"
 
 /***************************************************************
  *  Defines for OIS Control
  **************************************************************/
 #define CALIB_DATA_NUM      (0x30)
+#define PRODUCT_NAME_NUM    (13)
+#define PRODUCTION_DATE_NUM (4)
+#define RECALIB_DATE_NUM    (4)
+#define RECALIB_VERSION_NUM (2)
+#define INFO_DATA_NUM       (0x3A)
 #define BURST_SIZE          (0x80)
+#define LOOP_A              (200)
+#define LOOP_B              (LOOP_A-1)
+#define WAIT_TIME           (100)
+
+/* fw_update_item */
+#define UPDATE_ITEM_LENGTH    (3)
+
+/* fw downlaod */
+#define DW9784_CHIP_ID_ADDRESS  (0x7000)
+#define DW9784_CHIP_ID          (0x9784)
+
+#define SEL_CAL_MEM_SET         (0x5959)
+#define SEL_CAL_MEM_MODULE      (0xA6A6)
+
+#define FUNC_PASS             (0)
+#define FUNC_FAIL             (-1)
+
+#define EOK                     (0)
+#define ERROR_SECOND_ID         (1)
+#define ERROR_FW_CHECKSUM       (2)
+#define ERROR_FW_DOWN_FMC       (3)
+#define ERROR_FW_DOWN_FAIL      (4)
+#define ERROR_PARAM_CHECKSUM    (5)
+#define ERROR_PARAM_DOWN_STORE  (6)
+#define ERROR_PARAM_DOWN_ERASE  (7)
+
+#define DATPKT_SIZE         (256)
+
+#define MCS_START_ADDRESS   (0x8000)
+#define IF_START_ADDRESS    (0x8000)
+#define MCS_SIZE_W          (10240)   //20KB
+#define PID_SIZE_W          (256)     //0.5KB
+
+#define PARAM_START_ADDRESS (0x7180)
+#define PARAM_SIZE_W        (128)
+#define PARAM_PKT_SIZE      (32)
+
+/* gyro */
+#define GYRO_FRONT_LAYOUT   (0)
+#define GYRO_BACK_LAYOUT    (1)
+
+#define GYRO_DEGREE_0       (0)
+#define GYRO_DEGREE_90      (90)
+#define GYRO_DEGREE_180     (180)
+#define GYRO_DEGREE_270     (270)
+
+typedef struct {
+    u16 driverIc;
+    u16 *fwContentPtr;
+    u16 version;
+} FirmwareContex;
+
+typedef struct {
+    u16 *parContentPtr;
+} ParametersContex;
 
 typedef struct {
   int adr;
   int dat;
 } T_I2CRegWriteData;
 
+typedef void (*OIS_INIT_FUNC)(void);
+typedef void (*OIS_MODE_FUNC)(int mode);
+
 /***************************************************************
  *  Extern function for I2C
  **************************************************************/
-extern int __RegRead1ByteAddress(int CCISlaveAddress, int RegAddress, unsigned char *data, int size);
-extern int __CCIRegReadBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data);
-extern int __CCIRegWriteBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char data);
-extern int __CCIRegReadMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data, int size);
-extern int __CCIRegWriteMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data, int size);
+extern int __RegRead1ByteAddress(int CCISlaveAddress, int RegAddress, u8 *data, int size);
+extern int __CCIRegReadBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data);
+extern int __CCIRegWriteBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 data);
+extern int __CCIRegReadMBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data, int size);
+extern int __CCIRegWriteMBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data, int size);
+extern int __CCIRegRead16bit(u16 addr, u16* data);
+extern int __CCIRegWrite16bit(u16 addr, u16 data);
+extern int __CCIBlockWrite16bit(u16 addr, u16 *buf, u16 datalen);
+extern void delay_msec(u32 ms);
 
 /***************************************************************
  *  Declare function for OIS Control
  **************************************************************/
-void OIS_Init();
-void OIS_Mode(int mode);
+void OIS_InitNone();
+void OIS_InitV1();
+void OIS_InitV2();
+void OIS_ModeV1(int mode);
+void OIS_ModeV2(int mode);
 int RegWriteBurst(int slave_address, const T_I2CRegWriteData *I2CRegWriteData);
 int ReadGyroGain();
-int ReadCalibFromEEPROM(unsigned char *CalibData);
+int ReadCalibFromEEPROM(u8 *CalibData);
+int ReadProductNameFromEEPROM_V1(u8 *ProductName);
+int ReadProductNameFromEEPROM_V2(u8 *ProductName);
+int ReadProductionDateFromEEPROM_V1(u8 *ProductionDate);
+int ReadProductionDateFromEEPROM_V2(u8 *ProductionDate);
+int ReadReCalibDateFromEEPROM_V1(u8 *RecalibDate);
+int ReadReCalibVersionFromEEPROM_V1(u8 *RecalibVersion);
+void SetProductName(u8 *pName);
+
+void GenerateFirmwareContexts(void);
+int FWDownload(void);
+int VerifySecondChipId(void);
+u16 ReadChipId(void);
+int VerifyFirmwareChecksum(void);
+u16 ReadFirmwareVersion(void);
+int DownloadFirmware(int module_state);
+void ReleaseAllProtection(void);
+void EraseFlashIF(void);
+void EraseFlashFW(void);
+void EnterShutdownMode(void);
+void OISReset(void);
+int ServoOn(void);
+int ServoOff(void);
+int WaitCheckRegister(u16 reg, u16 ref);
 
 /***************************************************************
  *  Defines table for OIS Control

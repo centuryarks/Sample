@@ -32,12 +32,17 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <QMainWindow>
 #include <QTimer>
+#include <QFileDialog>
+#include <QStandardPaths>
+#include<QTextCodec>
 
 
 /***************************************************************
  *  Defines for Main window
  **************************************************************/
-#define VERSION     "CA378-AOIS  Demo  ver 1.0.1"
+#define PRODUCT_NAME    "CA378-AOIS"
+#define DEMO_VERSION    "  Demo  ver 2.0.0"
+#define PRODUCT_NAME_NUM    (13)
 
 enum E_FOCUS_MODE
 {
@@ -65,6 +70,11 @@ double GetSaturation();
 double GetEvCompensation();
 double GetRedGain();
 double GetBlueGain();
+void GetTuningFile(char *tuning_file);
+int GetRotationIndex();
+void GetProductName(char *product_name);
+int ExistsAFDriver();
+int IsAFDriverV2();
 }
 
 /***************************************************************
@@ -123,12 +133,15 @@ private slots:
     void on_radioButton_MeteringMode_Centre_clicked();
     void on_radioButton_MeteringMode_Spot_clicked();
     void on_radioButton_MeteringMode_Average_clicked();
+    void on_pushButton_TuningFile_clicked();
+    void on_comboBox_Rotation_currentIndexChanged(int index);
 
 private:
     Ui::MainWindow *ui;
     int focus_position;
     int focus_mode;
     int ois_mode;
+    int old_ois_mode;
     int af_on;
     int shutter;
     double gain;
@@ -143,6 +156,8 @@ private:
     double ev_compensation;
     double red_gain;
     double blue_gain;
+    char tuning_file[128];
+    int rotation_index;
 
     void awbModeFixed(bool fixed);
 };

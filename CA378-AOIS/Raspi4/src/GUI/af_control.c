@@ -62,6 +62,9 @@ int focusMode                    = 0;
 int AutoFocusFrameSyncMode       = 0;
 int useCenter4PointsOfPDdata     = 0;
 int logOutputOnlyForAF           = 0;
+int AutoFocusDriverId            = 0;
+int SensorSlaveId                = 0;
+int rotation                     = 0;
 
 /***************************************************************
  *  Property function for AF Control
@@ -167,8 +170,8 @@ int ColorOn(int h, int w, int pdafHeight, int pdafWidth)
  ******************************************************************************/
 void AFControl(int pdafWidth, int pdafHeight)
 {
-    unsigned char readData[0x1000];
-    unsigned char writeData;
+    u8 readData[0x1000];
+    u8 writeData;
     double dcc = 0.0;
     double cof = 0.0;
     int w, h;
@@ -192,7 +195,7 @@ void AFControl(int pdafWidth, int pdafHeight)
     }
 
     writeData = 1;
-    if (__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR, 0xe213, writeData) != 1)
+    if (__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), 0xe213, writeData) != 1)
     {
         printf("AFControl(0xe213) error!\n");
     }
@@ -203,25 +206,25 @@ void AFControl(int pdafWidth, int pdafHeight)
         int offsetAddress2 = 4 * (16 * (pdafHeight/2-0) + (pdafWidth/2-1));
 
         /* center 4(2x2) region */
-        if (__CCIRegReadMBySlaveAddress(CCI_SLAVE_ADDR, 0x7c08+offsetAddress1, &readData[offsetAddress1], 8) != 8)
+        if (__CCIRegReadMBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), 0x7c08+offsetAddress1, &readData[offsetAddress1], 8) != 8)
         {
             printf("get error(PDAF data(0x%04X))!  (center 4(2x2) region.)\n", 0x7c08+offsetAddress1);
         }
-        if (__CCIRegReadMBySlaveAddress(CCI_SLAVE_ADDR, 0x7c08+offsetAddress2, &readData[offsetAddress2], 8) != 8)
+        if (__CCIRegReadMBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), 0x7c08+offsetAddress2, &readData[offsetAddress2], 8) != 8)
         {
             printf("get error(PDAF data(0x%04X))!  (center 4(2x2) region..)\n", 0x7c08+offsetAddress2);
         }
     }
     else
     {
-        if (__CCIRegReadMBySlaveAddress(CCI_SLAVE_ADDR, 0x7c08, readData, 0x300) != 0x300)
+        if (__CCIRegReadMBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), 0x7c08, readData, 0x300) != 0x300)
         {
             printf("get error(PDAF data(0x7C08))!\n");
         }
     }
 
     writeData = 0;
-    if (__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR, 0xe213, writeData) != 1)
+    if (__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), 0xe213, writeData) != 1)
     {
         printf("AFControl(0xe213) error!!\n");
     }
@@ -315,7 +318,9 @@ void AFControl(int pdafWidth, int pdafHeight)
             if (dcc >  AutoFocusMoveLimit) dcc =  AutoFocusMoveLimit;
             if (dcc < -AutoFocusMoveLimit) dcc = -AutoFocusMoveLimit;
 
-            afPosition += dcc;
+            if (rotation == 0) afPosition += dcc;
+            else               afPosition -= dcc;
+
             if (afPosition < 0x000) afPosition = 0x000;
             if (afPosition > 0x3FF) afPosition = 0x3FF;
             DirectMove(afPosition);
@@ -339,7 +344,7 @@ void AFControl(int pdafWidth, int pdafHeight)
  *
  * @return  void
  ******************************************************************************/
-void DirectMode()
+void DirectModeV1()
 {
     if (focusControlMode == 0)
     { // CLAF Calibration Mode
@@ -347,7 +352,7 @@ void DirectMode()
         int set_regdata = 0x04;
 
         // Direct
-        if (__CCIRegWriteBySlaveAddress(AFDRV_I2C_ADDR, mode_address, set_regdata) == 0)
+        if (__CCIRegWriteBySlaveAddress(AFDRV_I2C_ADDR_V1, mode_address, set_regdata) == 0)
         {
             printf("set: error(Direct(0x60D6))!\n");
         }
@@ -357,7 +362,7 @@ void DirectMode()
         // Anti-Noise before Servo ON
         int anti_noise_address = 0x614C;
         int anti_noise_regdata = 0x00;
-        if (__CCIRegWriteBySlaveAddress(AFDRV_I2C_ADDR, anti_noise_address, anti_noise_regdata) == 0)
+        if (__CCIRegWriteBySlaveAddress(AFDRV_I2C_ADDR_V1, anti_noise_address, anti_noise_regdata) == 0)
         {
             printf("set: error(Anti-Noise before Servo ON(0x614C))!\n");
         }
@@ -365,11 +370,62 @@ void DirectMode()
         // CLAF Control: Servo ON
         int claf_control_address = 0x60D6;
         int claf_control_regdata = 0x01;
-        if (__CCIRegWriteBySlaveAddress(AFDRV_I2C_ADDR, claf_control_address, claf_control_regdata) == 0)
+        if (__CCIRegWriteBySlaveAddress(AFDRV_I2C_ADDR_V1, claf_control_address, claf_control_regdata) == 0)
         {
             printf("set: error(CLAF Control(0x60D6))!\n");
         }
     }
+}
+
+/*******************************************************************************
+ * @brief   Focus direct mode
+ *
+ * @param   void
+ *
+ * @return  void
+ ******************************************************************************/
+void DirectModeV2()
+{
+    // All protection release (1)
+    if (__CCIRegWrite16bit(0xFAFA, 0x98AC) == 0) {
+        printf("set: error(All protection release (1))!\n"); return;
+    }
+
+    usleep(1 * 1000);  // Wait(1ms)
+
+    // All protection release (2)
+    if (__CCIRegWrite16bit(0xF053, 0x70BD) == 0) {
+        printf("set: error(All protection release (2))!\n"); return;
+    }
+
+    usleep(1 * 1000);  // Wait(1ms)
+
+    // SAC disable
+    if (__CCIRegWrite16bit(0xD010, 0x0000) == 0) {
+        printf("set: error(SAC disable))!\n"); return;
+    }
+
+    // AF driver enable
+    if (__CCIRegWrite16bit(0xD521, 0x0100) == 0) {
+        printf("set: error(AF driver enable))!\n"); return;
+    }
+}
+
+/*******************************************************************************
+ * @brief   linear transformation
+ *
+ * @param   value       Input value
+ * @param   in_min      Input minimum value
+ * @param   in_max      Input maximum value
+ * @param   out_min     Output minimum value
+ * @param   out_max     Output maximum value
+ *
+ * @return  result      Output value
+ ******************************************************************************/
+double map(double value, double in_min, double in_max, double out_min, double out_max) {
+  double ratio = (value - in_min) / (in_max - in_min);
+  double result = out_min + ratio * (out_max - out_min);
+  return result;
 }
 
 /*******************************************************************************
@@ -381,17 +437,36 @@ void DirectMode()
  ******************************************************************************/
 void DirectMove(int position)
 {
+    if (AutoFocusDriverId == 1)
+    {
+        DirectMoveV1(position);
+    }
+    else if (AutoFocusDriverId == 2)
+    {
+        DirectMoveV2(position);
+    }
+}
+
+/*******************************************************************************
+ * @brief   Focus direct moving
+ *
+ * @param   position    Focus target position
+ *
+ * @return  void
+ ******************************************************************************/
+void DirectMoveV1(int position)
+{
     if (focusControlMode == 0)
     { // CLAF Calibration Mode
-        unsigned char direct_regdata[2];
+        u8 direct_regdata[2];
         int direct_address = 0x60E4;
 
         lastAfPosition = position;
 
-        direct_regdata[0] = (unsigned char)((position >> 8) & 0xFF);
-        direct_regdata[1] = (unsigned char)( position       & 0xFF);
+        direct_regdata[0] = (u8)((position >> 8) & 0xFF);
+        direct_regdata[1] = (u8)( position       & 0xFF);
 
-        if (__CCIRegWriteMBySlaveAddress(AFDRV_I2C_ADDR, direct_address, direct_regdata, 2) != 2)
+        if (__CCIRegWriteMBySlaveAddress(AFDRV_I2C_ADDR_V1, direct_address, direct_regdata, 2) != 2)
         {
             printf("set: error(FocusMode Direct(0x60E4))!\n");
         }
@@ -400,17 +475,37 @@ void DirectMove(int position)
     { // CLAF Servo ON
         // CLAF target
         int claf_target_address = 0x60DA;
-        unsigned char claf_target_regdata[2];
+        u8 claf_target_regdata[2];
 
         lastAfPosition = position;
 
-        claf_target_regdata[0] = (unsigned char)((position >> 8) & 0xFF);
-        claf_target_regdata[1] = (unsigned char)( position       & 0xFF);
+        claf_target_regdata[0] = (u8)((position >> 8) & 0xFF);
+        claf_target_regdata[1] = (u8)( position       & 0xFF);
 
-        if (__CCIRegWriteMBySlaveAddress(AFDRV_I2C_ADDR, claf_target_address, claf_target_regdata, 2) != 2)
+        if (__CCIRegWriteMBySlaveAddress(AFDRV_I2C_ADDR_V1, claf_target_address, claf_target_regdata, 2) != 2)
         {
             printf("set: error(FCLAF target(0x60DA))!\n");
         }
+    }
+}
+
+/*******************************************************************************
+ * @brief   Focus direct moving
+ *
+ * @param   position    Focus target position
+ *
+ * @return  void
+ ******************************************************************************/
+void DirectMoveV2(int position)
+{
+    printf("DirectMoveV2\n");
+    lastAfPosition = position;
+
+    int pos = map(position, 0, 1023, -1023, 1023);
+
+    // Write value to DAC (d'-1023 ~ d'1023)
+    if (__CCIRegWrite16bit(0xD52A, pos) == 0) {
+        printf("set: error(Write value to DAC)!\n"); return;
     }
 }
 
@@ -426,8 +521,8 @@ void DirectMove(int position)
  ******************************************************************************/
 void SetPDAF(int width, int height, int div_x, int div_y)
 {
-    unsigned char writeData[2];
-    unsigned char regdata;
+    u8 writeData[2];
+    u8 regdata;
     int addr;
     int div_width  = (int)(width  * AREA_RATEX / 100 / (div_x + 0.5) + 0.5);
     int div_height = (int)(height * AREA_RATEY / 100 / (div_y + 0.5) + 0.5);
@@ -439,7 +534,7 @@ void SetPDAF(int width, int height, int div_x, int div_y)
     addr = 0x38a4;
     writeData[0] = offset_x >> 8;
     writeData[1] = offset_x & 0xFF;
-    if(__CCIRegWriteMBySlaveAddress(CCI_SLAVE_ADDR, addr, writeData, 2) != 2)
+    if(__CCIRegWriteMBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), addr, writeData, 2) != 2)
     {
         printf("Error.(%04X)\n", addr);
     }
@@ -447,7 +542,7 @@ void SetPDAF(int width, int height, int div_x, int div_y)
     addr = 0x38a6;
     writeData[0] = offset_y >> 8;
     writeData[1] = offset_y & 0xFF;
-    if(__CCIRegWriteMBySlaveAddress(CCI_SLAVE_ADDR, addr, writeData, 2) != 2)
+    if(__CCIRegWriteMBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), addr, writeData, 2) != 2)
     {
         printf("Error.(%04X)\n", addr);
     }
@@ -455,7 +550,7 @@ void SetPDAF(int width, int height, int div_x, int div_y)
     addr = 0x38a8;
     writeData[0] = div_width >> 8;
     writeData[1] = div_width & 0xFF;
-    if(__CCIRegWriteMBySlaveAddress(CCI_SLAVE_ADDR, addr, writeData, 2) != 2)
+    if(__CCIRegWriteMBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), addr, writeData, 2) != 2)
     {
         printf("Error.(%04X)\n", addr);
     }
@@ -463,7 +558,7 @@ void SetPDAF(int width, int height, int div_x, int div_y)
     addr = 0x38aa;
     writeData[0] = div_height >> 8;
     writeData[1] = div_height & 0xFF;
-    if(__CCIRegWriteMBySlaveAddress(CCI_SLAVE_ADDR, addr, writeData, 2) != 2)
+    if(__CCIRegWriteMBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), addr, writeData, 2) != 2)
     {
         printf("Error.(%04X)\n", addr);
     }
@@ -485,14 +580,14 @@ void SetPDAF(int width, int height, int div_x, int div_y)
         regdata = 0x2;
     }
 
-    if(__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR, addr, regdata) == 0)
+    if(__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), addr, regdata) == 0)
     {
         printf("Error.(%04X)\n", addr);
     }
 
     addr = 0x3e37;
     regdata = 0x1;
-    if(__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR, addr, regdata) == 0)
+    if(__CCIRegWriteBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), addr, regdata) == 0)
     {
         printf("Error.(%04X)\n", addr);
     }
@@ -532,7 +627,7 @@ double Q6_4(int data)
  *
  * @return              Result value
  ******************************************************************************/
-double CalcDCC(volatile unsigned char * data, int pdafWidth, int pdafHeight)
+double CalcDCC(volatile u8 * data, int pdafWidth, int pdafHeight)
 {
     int h, w;
     int count = 0;
@@ -637,8 +732,8 @@ int ReadAFSettingFile()
 /*******************************************************************************
  * @brief   Set Focus Control Mode
  *
- * @param   mode               Focus Control Mode(0: Calibration Mode  1: Servo On)
- *          useCenter4points   Use Center 4 Points of PD data(0: All PD data  1: Center 4 Points of PD data)
+ * @param   mode                Focus Control Mode(0: Calibration Mode  1: Servo On)
+ * @param   useCenter4points    Use Center 4 Points of PD data(0: All PD data  1: Center 4 Points of PD data)
  *
  * @return  void
  ******************************************************************************/
@@ -646,6 +741,18 @@ void SetFocusControlMode(int mode, int useCenter4points)
 {
     focusControlMode = mode;
     useCenter4PointsOfPDdata = useCenter4points;
+}
+
+/*******************************************************************************
+ * @brief   Set AF Driver ID
+ *
+ * @param   afDriverId          AF Driver ID
+ *
+ * @return  void
+ ******************************************************************************/
+void SetAfDriverId(int afDriverId)
+{
+    AutoFocusDriverId = afDriverId;
 }
 
 /*******************************************************************************
@@ -669,13 +776,37 @@ void SetFocusMode(int mode)
  ******************************************************************************/
 int GetStreaming()
 {
-	unsigned char readData;
+	u8 readData;
 	int addr = 0x0100;
 
-	if (__CCIRegReadBySlaveAddress(CCI_SLAVE_ADDR, addr, &readData) != 1)
+	if (__CCIRegReadBySlaveAddress(CCI_SLAVE_ADDR(SensorSlaveId), addr, &readData) != 1)
 	{
 		printf("error!\n");
 	}
 
 	return readData;
+}
+
+/*******************************************************************************
+ * @brief   Set Sensor Slave Id
+ *
+ * @param   sensorSlaveId       Sensor Slave ID
+ *
+ * @return  void
+ ******************************************************************************/
+void SetSensorSlaveId(int sensorSlaveId)
+{
+    SensorSlaveId = sensorSlaveId;
+}
+
+/*******************************************************************************
+ * @brief   Set Rotation
+ *
+ * @param   rotationIndex      Rotation index
+ *
+ * @return  void
+ ******************************************************************************/
+void SetRotation(int rotationIndex)
+{
+    rotation = rotationIndex;
 }

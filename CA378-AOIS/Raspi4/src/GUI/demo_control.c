@@ -49,6 +49,7 @@ int g_div_y;
 int g_width;
 int g_height;
 int g_sensor_id;
+int g_sensor_slave_id;
 int g_fps;
 double g_gain;
 int g_shutter;
@@ -57,7 +58,7 @@ int g_raw;
 char PathPreview[DEMO_PATH_MAX]     = "/home/pi/demo/script/preview.sh";
 char PathStill[DEMO_PATH_MAX]       = "/home/pi/demo/script/stillCapture.sh";
 char PathIniFile[DEMO_PATH_MAX]     = "./bin/demo.ini";
-char TuningFile[DEMO_PATH_MAX]      = "/usr/share/libcamera/ipa/raspberrypi/imx378.json";
+char TuningFile[DEMO_PATH_MAX]      = "/usr/share/libcamera/ipa/rpi/vc4/imx378.json";
 int g_focus_control_mode = 0;
 int g_use_center_4points_of_pd_data = 0;
 double g_sharpness = 1.0;
@@ -70,20 +71,35 @@ double g_blue_gain = 1.0;
 int g_metering_mode = 0;
 int g_denoise_mode = 0;
 int g_awb_mode = 0;
+int g_af_driver_id = AF_DRIVER_NONE;
+int g_lens_id = LENS_V1;
+int g_rotation_index = 0;
+OIS_INIT_FUNC OIS_Init_Func[] = {OIS_InitNone, OIS_InitV1, OIS_InitV2};
+OIS_INIT_FUNC OIS_Init;
+OIS_MODE_FUNC OIS_Mode_Func[] = {NULL, OIS_ModeV1, OIS_ModeV2};
+OIS_MODE_FUNC OIS_Mode;
+DIRECT_MODE_FUNC DirectModeFunc[] = {NULL, DirectModeV1, DirectModeV2};
+DIRECT_MODE_FUNC DirectMode;
 
 /***************************************************************
  *  Property
  **************************************************************/
-int GetShutter() { return g_shutter;  }
-double GetGain()  { return g_gain;      }
+int GetShutter() { return g_shutter; }
+double GetGain() { return g_gain; }
 int GetFocusPosition() { return GetAfPosition(); }
-double GetSharpness()  { return g_sharpness; }
+double GetSharpness() { return g_sharpness; }
 double GetContrast() { return g_contrast; }
 double GetBrightness() { return g_brightness; }
 double GetSaturation() { return g_saturation; }
 double GetEvCompensation() { return g_ev_compensation; }
 double GetRedGain() { return g_red_gain; }
 double GetBlueGain() { return g_blue_gain; }
+void GetTuningFile(char *tuning_file) { strcpy(tuning_file, TuningFile); }
+int GetRotationIndex() { return g_rotation_index; }
+void GetProductName(char *product_name) { SetProductName((u8 *)product_name); }
+int ExistsAFDriver() { return (g_af_driver_id != AF_DRIVER_NONE); }
+int IsAFDriverV1() { return (g_af_driver_id == AF_DRIVER_V1); }
+int IsAFDriverV2() { return (g_af_driver_id == AF_DRIVER_V2); }
 
 /*******************************************************************************
  * @brief   Initialize Demo software
@@ -98,7 +114,20 @@ int DemoInit()
 
     int ret;
 
+    ReadSettingFile();
+
     g_sensor_id = GetSensID();
+    g_sensor_slave_id = i2c_exists(g_sensor_id, IMX378_I2C_ADDR, 1, (u8 *)"UU");
+    if (g_sensor_slave_id == 0) {
+        g_sensor_slave_id = i2c_exists(g_sensor_id, IMX378_I2C_ADDR_V2WIDE, 2, (u8 *)"UU");
+        if (g_sensor_slave_id == 0) {
+            printf("Camera is not connected.\n");
+            return 0;
+        }
+    }
+    g_sensor_slave_id -= 1;
+    printf("sensor slave id: %d\n", g_sensor_slave_id);
+    SetSensorSlaveId(g_sensor_slave_id);
 
     i2c_open(g_sensor_id);
 
@@ -107,8 +136,6 @@ int DemoInit()
     g_div_x  = GetPDAFWidth();
     g_div_y  = GetPDAFHeight();
     g_fps    = GetFPS();
-
-    ReadSettingFile();
 
     g_aec_agc = 1;  // auto
     g_raw = 0;  // do not save raw file
@@ -155,12 +182,12 @@ int DemoControl(char *commandLine)
 
     if (strcmp(commandLine, "lsc 1") == 0)
     {
-        SetLSC(1);
+        SetLSC(1, g_lens_id, g_sensor_slave_id);
         printf("lsc on\n");
     }
     else if (strcmp(commandLine, "lsc 0") == 0)
     {
-        SetLSC(0);
+        SetLSC(0, g_lens_id, g_sensor_slave_id);
         printf("lsc off\n");
     }
     else if (strstr(commandLine, "af 1") != 0)
@@ -177,29 +204,34 @@ int DemoControl(char *commandLine)
     {
         sscanf(commandLine, "%s %d", command, &afPosition);
 
-        printf("Focus Position:%d\n", afPosition);
-        if (afPosition > 0x03ff || afPosition < 0)
+        if (ExistsAFDriver())
         {
-            printf("write: invalid data\n");
-        }
-        else
-        {
-            usleep(FOCUS_WAIT * 1000);
-            DirectMode();
-            usleep(FOCUS_WAIT * 1000);
-            DirectMove(afPosition);
+            printf("Focus Position:%d\n", afPosition);
+            if (afPosition > 0x03ff || afPosition < 0)
+            {
+                printf("write: invalid data\n");
+            }
+            else
+            {
+                usleep(FOCUS_WAIT * 1000);
+                if (DirectMode != NULL) { DirectMode(); }
+                usleep(FOCUS_WAIT * 1000);
+                DirectMove(afPosition);
+            }
         }
     }
     else if (strstr(commandLine, "ois") != 0)
     {
-        sscanf(commandLine, "%s %d", command, &mode);
-
-        OIS_Mode(mode);
+        if (OIS_Mode != NULL)
+        {
+            sscanf(commandLine, "%s %d", command, &mode);
+            OIS_Mode(mode);
+        }
     }
     else if (strstr(commandLine, "shutter/gain") != 0)
     {
         sscanf(commandLine, "%s %d %lf", command, &g_shutter, &g_gain);
-        printf("Shutter:%d, Gain:%2.1f\n", g_shutter, g_gain);
+        printf("Shutter:%d, Gain:%2.2f\n", g_shutter, g_gain);
 
         RestartPreview(1);
     }
@@ -219,7 +251,7 @@ int DemoControl(char *commandLine)
     }
     else if (strstr(commandLine, "cameracontrol") != 0)
     {
-        sscanf(commandLine, "%s %lf %lf %lf %lf %lf %d %d %lf %lf", 
+        sscanf(commandLine, "%s %lf %lf %lf %lf %lf %d %d %lf %lf %d",
             command,
             &g_sharpness,
             &g_contrast,
@@ -227,8 +259,15 @@ int DemoControl(char *commandLine)
             &g_saturation,
             &g_ev_compensation,
             &g_denoise_mode,
-            &g_awb_mode, &g_red_gain, &g_blue_gain);
+            &g_awb_mode, &g_red_gain, &g_blue_gain,
+            &g_rotation_index);
 
+        SetRotation(g_rotation_index);
+        RestartPreview(1);
+    }
+    else if (strstr(commandLine, "tuning-file") != 0)
+    {
+        sscanf(commandLine, "%s %s", command, TuningFile);
         RestartPreview(1);
     }
     else
@@ -285,16 +324,21 @@ int ReadSettingFile()
                         else if (strcmp(itemName, "FocusControlMode") == 0)
                         {
                             g_focus_control_mode = atoi(p);
-                            printf("Focus Control Mode:%d\n", g_focus_control_mode);
+                            printf("Focus Control Mode: %d\n", g_focus_control_mode);
                         }
                         else if (strcmp(itemName, "UseCenter4PointsOfPDdata") == 0)
                         {
                             g_use_center_4points_of_pd_data = atoi(p);
-                            printf("Use Center 4 Points Of PD data:%d\n", g_use_center_4points_of_pd_data);
+                            printf("Use Center 4 Points Of PD data: %d\n", g_use_center_4points_of_pd_data);
                         }
                         else if (strcmp(itemName, "tuning-file") == 0)
                         {
                             strcpy(TuningFile, p);
+                        }
+                        else if (strcmp(itemName, "rotation") == 0)
+                        {
+                            g_rotation_index = atoi(p);
+                            SetRotation(g_rotation_index);
                         }
                         break;
                     default:
@@ -355,8 +399,17 @@ int WriteSettingFile()
                         }
                         else if (strcmp(itemName, "gain") == 0)
                         {
-                            sprintf(&buf[LINEBUF_MAX * i], "gain=%2.1f\n", g_gain);
-                            printf("Gain:%2.1f\n", g_gain);
+                            sprintf(&buf[LINEBUF_MAX * i], "gain=%2.2f\n", g_gain);
+                            printf("Gain:%2.2f\n", g_gain);
+                        }
+                        else if (strcmp(itemName, "tuning-file") == 0)
+                        {
+                            sprintf(&buf[LINEBUF_MAX * i], "tuning-file=%s\n", TuningFile);
+                        }
+                        else if (strcmp(itemName, "rotation") == 0)
+                        {
+                            sprintf(&buf[LINEBUF_MAX * i], "rotation=%d\n", g_rotation_index);
+                            printf("Rotation:%d\n", g_rotation_index);
                         }
                         break;
                     default:
@@ -397,11 +450,14 @@ int Capture(int mode)
 
     WaitStreaming();
 
-    printf("Focus Position:%d\n", GetAfPosition());
-    usleep(FOCUS_WAIT * 1000);
-    DirectMode();
-    usleep(FOCUS_WAIT * 1000);
-    DirectMove(GetAfPosition());
+    if (ExistsAFDriver())
+    {
+        printf("Focus Position:%d\n", GetAfPosition());
+        usleep(FOCUS_WAIT * 1000);
+        if (DirectMode != NULL) { DirectMode(); }
+        usleep(FOCUS_WAIT * 1000);
+        DirectMove(GetAfPosition());
+    }
 
     while (run_capture_thread)
     {
@@ -445,11 +501,14 @@ int RestartPreview(int stop)
 
     WaitStreaming();
 
-    printf("Focus Position:%d\n", GetAfPosition());
-    usleep(FOCUS_WAIT * 1000);
-    DirectMode();
-    usleep(FOCUS_WAIT * 1000);
-    DirectMove(GetAfPosition());
+    if (ExistsAFDriver())
+    {
+        printf("Focus Position:%d\n", GetAfPosition());
+        usleep(FOCUS_WAIT * 1000);
+        if (DirectMode != NULL) { DirectMode(); }
+        usleep(FOCUS_WAIT * 1000);
+        DirectMove(GetAfPosition());
+    }
 
     ret = StartAFCThread();
     if (ret == -1) return 0;
@@ -491,13 +550,15 @@ int MessageQueueSend(char *message)
  ******************************************************************************/
 int StartAFCThread()
 {
+    if (!ExistsAFDriver()) return 1;
+
     printf("StartAFCThread\n");
     int ret;
 
     SetPDAF(g_width, g_height, g_div_x, g_div_y);
 
     usleep(FOCUS_WAIT * 1000);
-    DirectMode();
+    if (DirectMode != NULL) { DirectMode(); }
     usleep(FOCUS_WAIT * 1000);
 
     run_afc_thread = 1;
@@ -520,6 +581,8 @@ int StartAFCThread()
  ******************************************************************************/
 void StopAFCThread()
 {
+    if (!ExistsAFDriver()) return;
+
     printf("StopAFCThread\n");
     abort_afc_thread = 1;
     run_afc_thread = 0;
@@ -613,7 +676,26 @@ int WaitStreaming()
         usleep(100 * 1000);
     }
 
-    OIS_Init();
+    g_af_driver_id = i2c_exists(g_sensor_id, AFDRV_I2C_ADDR_V1, AF_DRIVER_V1, (u8 *)"");
+    if (!ExistsAFDriver()) {
+        g_af_driver_id = i2c_exists(g_sensor_id, AFDRV_I2C_ADDR_V2, AF_DRIVER_V2, (u8 *)"");
+    }
+    printf("af_driver id: %d\n", g_af_driver_id);
+
+    g_lens_id = (IsAFDriverV1()) ? LENS_V1 :
+                (IsAFDriverV2()) ? LENS_V2 :
+                LENS_V2_WIDE;
+
+    SetAfDriverId(g_af_driver_id);
+
+    OIS_Init = OIS_Init_Func[g_af_driver_id];
+    OIS_Mode = OIS_Mode_Func[g_af_driver_id];
+    DirectMode = DirectModeFunc[g_af_driver_id];
+
+    if (OIS_Init != NULL)
+    {
+        OIS_Init();
+    }
 
     return 1;
 }
@@ -644,13 +726,13 @@ void GenerateOptions(char *options, int maxlength, int still)
     if (g_aec_agc == 0)
     {
         len += snprintf(options + len, maxlength - len, " --shutter %d", g_shutter);
-        len += snprintf(options + len, maxlength - len, " --gain %2.1f", g_gain);
+        len += snprintf(options + len, maxlength - len, " --gain %2.2f", g_gain);
     }
 
     const char* METERING_MODE[] = {
         "centre",
         "spot",
-        "average",
+        "average"
     };
     int metering_mode_num = sizeof(METERING_MODE) / sizeof(char*);
     if (g_metering_mode < metering_mode_num)
@@ -671,7 +753,7 @@ void GenerateOptions(char *options, int maxlength, int still)
         "fluorescent",
         "indoor",
         "daylight",
-        "cloudy",
+        "cloudy"
     };
     int awb_mode_num = sizeof(AWB_MODE) / sizeof(char*);
     if (g_awb_mode < awb_mode_num)
@@ -688,11 +770,21 @@ void GenerateOptions(char *options, int maxlength, int still)
         "off",
         "cdn_off",
         "cdn_fast",
-        "cdn_hq",
+        "cdn_hq"
     };
     int denoise_mode_num = sizeof(DENOISE_MODE) / sizeof(char*);
     if (g_denoise_mode < denoise_mode_num)
     {
         len += snprintf(options + len, maxlength - len, " --denoise %s", DENOISE_MODE[g_denoise_mode]);
+    }
+
+    const int ROTATION_ANGLE[] = {
+        0,
+        180
+    };
+    int rotation_angle_num = sizeof(ROTATION_ANGLE) / sizeof(int);
+    if (g_rotation_index < rotation_angle_num)
+    {
+        len += snprintf(options + len, maxlength - len, " --rotation %d", ROTATION_ANGLE[g_rotation_index]);
     }
 }

@@ -48,6 +48,9 @@
 (Support for SSP library 1.28)
 
 ### CA378-AOIS Sample code for Raspberry Pi 4
+[CA378-AOIS Sample code v2.0.0 for Raspberry Pi 4](https://github.com/centuryarks/Sample/releases/download/RPi4_v2.0.0/demo_v2.0.0_pi4.tar.gz)
+- Support for CA378-AOIS-V2, CA378-V2wide
+
 [CA378-AOIS Sample code v1.0.1 for Raspberry Pi 4](https://github.com/centuryarks/Sample/releases/download/RPi4_v1.0.1/demo_v1.0.1_pi4.tar.gz)
 - Support for Raspberry Pi OS 2023-10-10 (Kernel version: 6.1) Debian version: 12 (bookworm)
 

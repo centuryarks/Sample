@@ -30,9 +30,11 @@ either expressed or implied, of the FreeBSD Project.
 #ifndef __SLAVE_ADDRESS_H__
 #define __SLAVE_ADDRESS_H__
 
-#define IMX378_I2C_ADDR (0x1A)        /**< IMX378 slave address */
-#define AFDRV_I2C_ADDR  (0x3E)        /**< AF Driver slave address */
-#define EEPROM_I2C_ADDR (0x50)        /**< EEPROM slave address */
-#define CCI_SLAVE_ADDR  IMX378_I2C_ADDR
+#define IMX378_I2C_ADDR         (0x1A)        /**< IMX378 slave address */
+#define IMX378_I2C_ADDR_V2WIDE  (0x10)        /**< IMX378 slave address(V2wide) */
+#define AFDRV_I2C_ADDR_V1       (0x3E)        /**< AF Driver slave address */
+#define AFDRV_I2C_ADDR_V2       (0x72)        /**< AF Driver slave address */
+#define EEPROM_I2C_ADDR         (0x50)        /**< EEPROM slave address */
+#define CCI_SLAVE_ADDR(x)       ((x) == 0 ? (IMX378_I2C_ADDR) : (IMX378_I2C_ADDR_V2WIDE))
 
 #endif

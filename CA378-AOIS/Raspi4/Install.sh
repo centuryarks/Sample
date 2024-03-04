@@ -12,10 +12,11 @@ echo autoFocusGain=2.0>>demo.ini
 echo autoFocusConfidenceThreshold=10>>demo.ini
 echo autoFocusMoveLimit=100>>demo.ini
 echo autoFocusFrameSyncMode=0>>demo.ini
-echo gain=1.0>>demo.ini
+echo gain=1.00>>demo.ini
 echo shutter=20000>>demo.ini
 echo FocusControlMode=0>>demo.ini
 echo UseCenter4PointsOfPDdata=0>>demo.ini
+echo rotation=0>>demo.ini
 mv demo.ini ./bin/
 
 # make demo script
@@ -39,7 +40,12 @@ echo cd ${PWD}>>stillCapture.sh
 echo 'DATETIME=`date "+%Y%m%d_%H%M%S"`'>>stillCapture.sh
 echo 'FILENAME=still_${1}x${2}_${DATETIME}'>>stillCapture.sh
 echo 'libcamera-still --width ${1} --height ${2} -o ${FILENAME}.jpg --tuning-file ${3} ${4}'>>stillCapture.sh
-echo 'gpicview ${FILENAME}.jpg &'>>stillCapture.sh
+echo 'VERSION_CODENAME=$(cat /etc/os-release | grep VERSION_CODENAME | awk -F'=' '{print $2}'>&1)'>>stillCapture.sh
+echo 'if [ "${VERSION_CODENAME}" = "bookworm" ]; then'>>stillCapture.sh
+echo '    eom ${FILENAME}.jpg &'>>stillCapture.sh
+echo 'else'>>stillCapture.sh
+echo '    gpicview ${FILENAME}.jpg &'>>stillCapture.sh
+echo 'fi'>>stillCapture.sh
 mv stillCapture.sh ./script
 
 # copy files

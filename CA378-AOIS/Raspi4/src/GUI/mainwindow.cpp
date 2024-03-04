@@ -44,10 +44,11 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     QString qstring;
 
-    DemoInit();
+    int res = DemoInit();
 
     focus_mode  = FOCUS_MODE_DIRECT;
     ois_mode = 0;
+    old_ois_mode = ois_mode;
     focus_position = 512;
     af_on = 0;
     shutter = GetShutter();
@@ -63,6 +64,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ev_compensation = GetEvCompensation();
     red_gain = GetRedGain();
     blue_gain = GetBlueGain();
+    GetTuningFile(tuning_file);
+    int current_rotation_index = GetRotationIndex();
 
     ui->setupUi(this);
     ui->radioButton_MeteringMode_Centre->setChecked(true);
@@ -105,6 +108,10 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->label_EvCompensation->setEnabled(false);
     ui->doubleSpinBox_EvCompensation->setEnabled(false);
 
+    ui->comboBox_Rotation->addItem("0");
+    ui->comboBox_Rotation->addItem("180");
+    ui->comboBox_Rotation->setCurrentIndex(current_rotation_index);
+
     ui->doubleSpinBox_ColourGain_Red->setValue(red_gain);
     ui->label_ColourGain_Red->setEnabled(false);
     ui->doubleSpinBox_ColourGain_Red->setEnabled(false);
@@ -113,12 +120,43 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->label_ColourGain_Blue->setEnabled(false);
     ui->doubleSpinBox_ColourGain_Blue->setEnabled(false);
 
-    this->setWindowTitle(VERSION);
+    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
+    QString tuningFilePath = QString(codec->toUnicode(tuning_file));
+    ui->label_TuningFile->setText(tuningFilePath);
 
-    on_pushButton_FocusApply_clicked();
+    QString windowTitle;
+    char product_name[PRODUCT_NAME_NUM+1];
+    memset(product_name, 0, PRODUCT_NAME_NUM+1);
+    GetProductName(product_name);
+    if (product_name[0] != 0) {
+        QString productName = QString(codec->toUnicode(product_name));
+        windowTitle.append(productName);
+    } else {
+        windowTitle.append(PRODUCT_NAME);
+    }
+    windowTitle.append(DEMO_VERSION);
+    this->setWindowTitle(windowTitle);
 
-    timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this, SLOT(update()));
+    if (!ExistsAFDriver()) {
+        ui->groupBox_FocusMode->setEnabled(false);
+        ui->groupBox_OIS_Mode->setEnabled(false);
+    } else {
+        if (IsAFDriverV2()) {
+            ui->radioButton_OIS_Mode1->setText("ON");
+            ui->radioButton_OIS_Mode2->hide();
+            ui->radioButton_OIS_Mode3->hide();
+            ui->radioButton_OIS_Mode4->hide();
+            ui->radioButton_OIS_Mode5->hide();
+            ui->groupBox_OIS_Mode->setEnabled(false);
+        }
+        on_pushButton_FocusApply_clicked();
+        timer = new QTimer(this);
+        connect(timer, SIGNAL(timeout()), this, SLOT(update()));
+    }
+
+    if (res == 0) {
+        ui->centralWidget->setEnabled(false);
+    }
 }
 
 /*******************************************************************************
@@ -301,7 +339,7 @@ void MainWindow::on_radioButton_Macro_clicked()
 void MainWindow::on_pushButton_FocusApply_clicked()
 {
     on_lineEdit_FocusPosition_editingFinished();
-    
+
     char command[256];
     snprintf(command, 256, "focus %d",
             ui->lineEdit_FocusPosition->text().toInt());
@@ -395,9 +433,12 @@ void MainWindow::on_radioButton_OIS_Mode5_clicked()
  ******************************************************************************/
 void MainWindow::on_pushButton_OIS_Apply_clicked()
 {
-    char command[256];
-    snprintf(command, 256, "ois %d", ois_mode);
-    DemoControl(command);
+    if (old_ois_mode != ois_mode) {
+        old_ois_mode = ois_mode;
+        char command[256];
+        snprintf(command, 256, "ois %d", ois_mode);
+        DemoControl(command);
+    }
 }
 
 /*******************************************************************************
@@ -456,7 +497,7 @@ void MainWindow::on_pushButton_ShutterGainApply_clicked()
     char command[256];
     snprintf(command, 256, "metering %d", metering_mode);
     DemoControl(command);
-    snprintf(command, 256, "shutter/gain %d %2.1f",
+    snprintf(command, 256, "shutter/gain %d %2.2f",
         ui->spinBox_Shutter->value(),
         ui->doubleSpinBox_Gain->value());
     DemoControl(command);
@@ -616,14 +657,15 @@ void MainWindow::on_radioButton_AwbMode_Fixed_clicked()
 void MainWindow::on_pushButton_CameraControlApply_clicked()
 {
     char command[256];
-    snprintf(command, 256, "cameracontrol %2.1f %2.1f %2.1f %2.1f %2.1f %d %d %2.1f %2.1f",
+    snprintf(command, 256, "cameracontrol %2.1f %2.1f %2.1f %2.1f %2.1f %d %d %2.1f %2.1f %d",
         ui->doubleSpinBox_Sharpness->value(),
         ui->doubleSpinBox_Contrast->value(),
         ui->doubleSpinBox_Brightness->value(),
         ui->doubleSpinBox_Saturation->value(),
         ui->doubleSpinBox_EvCompensation->value(),
         denoise_mode,
-        awb_mode, ui->doubleSpinBox_ColourGain_Red->value(), ui->doubleSpinBox_ColourGain_Blue->value());
+        awb_mode, ui->doubleSpinBox_ColourGain_Red->value(), ui->doubleSpinBox_ColourGain_Blue->value(),
+        rotation_index);
     DemoControl(command);
 }
 
@@ -663,4 +705,49 @@ void MainWindow::on_radioButton_MeteringMode_Spot_clicked()
 void MainWindow::on_radioButton_MeteringMode_Average_clicked()
 {
     metering_mode = 2;
+}
+
+/*******************************************************************************
+ * @brief   Select tuning file clicked on radio button
+ *
+ * @param   void
+ *
+ * @return  void
+ ******************************************************************************/
+void MainWindow::on_pushButton_TuningFile_clicked()
+{
+    GetTuningFile(tuning_file);
+    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
+    QString tuningFilePath = QString(codec->toUnicode(tuning_file));
+
+    QString fileName = QFileDialog::getOpenFileName(
+                            this,
+                            tr("Select Tuning File"),
+                            tuningFilePath,
+                            tr("Tuning Files (*.json)")
+                        );
+    if (fileName.isNull()) { return; }
+    if (fileName.isEmpty()) { return; }
+    if (fileName.compare(tuningFilePath, Qt::CaseSensitive) == 0 ) { return; }
+
+    ui->label_TuningFile->setText(fileName);
+    char *TuningFile = fileName.toUtf8().data();
+
+    char command[256];
+    snprintf(command, 256, "tuning-file %s", TuningFile);
+    DemoControl(command);
+}
+
+/*******************************************************************************
+ * @brief   Rotation current index changed
+ *
+ * @param   index       Rotation index
+ *
+ * @return  void
+ ******************************************************************************/
+void MainWindow::on_comboBox_Rotation_currentIndexChanged(int index)
+{
+    if (index != rotation_index) {
+        rotation_index = index;
+    }
 }

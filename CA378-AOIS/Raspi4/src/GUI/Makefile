@@ -132,7 +132,6 @@ DIST          = /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/qt_config.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/spec_post.prf \
-		.qmake.stash \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/exclusive_builds.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/toolchain.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/default_pre.prf \
@@ -234,7 +233,6 @@ Makefile: DemoGUI.pro /usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++/qmake.con
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/qt_config.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/spec_post.prf \
-		.qmake.stash \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/exclusive_builds.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/toolchain.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/default_pre.prf \
@@ -319,7 +317,6 @@ Makefile: DemoGUI.pro /usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++/qmake.con
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/qt_config.prf:
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf:
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/spec_post.prf:
-.qmake.stash:
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/exclusive_builds.prf:
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/toolchain.prf:
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/default_pre.prf:
@@ -436,15 +433,19 @@ demo_control.o: demo_control.c demo_control.h \
 
 af_control.o: af_control.c af_control.h \
 		slave_address.h \
+		types_util.h \
 		gpio_control.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o af_control.o af_control.c
 
 lsc_control.o: lsc_control.c lsc_control.h \
-		slave_address.h
+		slave_address.h \
+		types_util.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o lsc_control.o lsc_control.c
 
 ois_control.o: ois_control.c ois_control.h \
-		slave_address.h
+		slave_address.h \
+		types_util.h \
+		DW9784_Temp_FW_V0403_D1022.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o ois_control.o ois_control.c
 
 gpio_control.o: gpio_control.c gpio_control.h

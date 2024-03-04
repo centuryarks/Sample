@@ -31,6 +31,7 @@ either expressed or implied, of the FreeBSD Project.
 #define __AF_CONTROL_H__
 
 #include "slave_address.h"
+#include "types_util.h"
 
 /***************************************************************
  *  Defines for AF Control
@@ -42,13 +43,25 @@ either expressed or implied, of the FreeBSD Project.
 #define AREA_RATEX  (80)
 #define AREA_RATEY  (80)
 
+enum E_AF_DRIVER_ID
+{
+    AF_DRIVER_NONE = 0,
+    AF_DRIVER_V1,
+    AF_DRIVER_V2
+};
+
+typedef void (*DIRECT_MODE_FUNC)(void);
+typedef void (*DIRECT_MOVE_FUNC)(int position);
+
 /***************************************************************
  *  Extern function for I2C
  **************************************************************/
-extern int __CCIRegReadBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data);
-extern int __CCIRegWriteBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char data);
-extern int __CCIRegReadMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data, int size);
-extern int __CCIRegWriteMBySlaveAddress(int CCISlaveAddress, int RegAddress, unsigned char *data, int size);
+extern int __CCIRegReadBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data);
+extern int __CCIRegWriteBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 data);
+extern int __CCIRegReadMBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data, int size);
+extern int __CCIRegWriteMBySlaveAddress(int CCISlaveAddress, int RegAddress, u8 *data, int size);
+extern int __CCIRegRead16bit(u16 addr, u16* data);
+extern int __CCIRegWrite16bit(u16 addr, u16 data);
 
 /***************************************************************
  *  Declare function for AF Control
@@ -63,14 +76,20 @@ int GetPDAFHeight();
 int GetAfPosition();
 void SetParam(int argc, char *argv[]);
 void AFControl(int pdafWidth, int pdafHeight);
-void DirectMode();
+void DirectModeV1();
+void DirectModeV2();
 void DirectMove(int position);
+void DirectMoveV1(int position);
+void DirectMoveV2(int position);
 void SetPDAF(int width, int height, int div_x, int div_y);
 double Q6_4(int data);
-double CalcDCC(volatile unsigned char * data, int pdafWidth, int pdafHeight);
+double CalcDCC(volatile u8 * data, int pdafWidth, int pdafHeight);
 int ReadAFSettingFile();
 void SetFocusControlMode(int mode, int useCenter4points);
+void SetAfDriverId(int afDriver);
 void SetFocusMode(int mode);
 int GetStreaming();
+void SetSensorSlaveId(int sensorSlaveId);
+void SetRotation(int rotationIndex);
 
 #endif

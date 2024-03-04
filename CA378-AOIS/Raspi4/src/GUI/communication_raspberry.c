@@ -27,6 +27,8 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -214,6 +216,87 @@ void delay_msec(u32 ms)
 void delay_usec(u32 us)
 {
     usleep(us);
+}
+
+/*******************************************************************************
+ * @brief   Exists I2C slave address
+ *
+ * @param   i2c_dev         I2C device name
+ * @param   slaveAddr       Slave address
+ * @param   id              ID
+ * @param   searchPattern   Search pattern
+ *
+ * @return  I2C slave address id if exist, 0 if not.
+ ******************************************************************************/
+s32 i2c_exists(i2c_dev_t i2c_dev, u16 slaveAddr, u16 id, u8 *searchPattern)
+{
+    int i2cBus = 0;
+    char i2c_bus[BUFFER_MAX];
+    memset(i2c_bus, 0, BUFFER_MAX);
+    char pattern[BUFFER_MAX];
+    memset(pattern, 0, BUFFER_MAX);
+    strcpy(pattern, (char *)searchPattern);
+    int pattern_len = strlen(pattern);
+    if (pattern_len == 0)
+    {
+        snprintf(pattern, BUFFER_MAX, "%02x", slaveAddr);
+    }
+
+    char i2c_dev_name[BUFFER_MAX];
+    strcpy(i2c_dev_name, g_i2c_dev_name_table[i2c_dev]);
+
+    char *tok;
+    tok = strtok(i2c_dev_name, "-");
+
+    while ((tok = strtok(NULL, "-")) != NULL)
+    {
+        strcpy(i2c_bus, tok);
+    }
+
+    int i2c_bus_len = strlen(i2c_bus);
+    if (i2c_bus_len == 0)
+    {
+        return 0;
+    }
+
+    i2cBus = atoi(i2c_bus);
+    char command[BUFFER_MAX];
+    snprintf(command, BUFFER_MAX, "i2cdetect -y %d 0x%02x 0x%02x | grep %s", i2cBus, slaveAddr, slaveAddr, pattern);
+    printf("%s\n", command);
+
+    FILE* fp;
+    char buf[BUFFER_MAX];
+    memset(buf, 0, BUFFER_MAX);
+    char i2c_detect_line[BUFFER_MAX];
+    memset(i2c_detect_line, 0, BUFFER_MAX);
+
+    if ((fp = popen(command, "r")) == NULL)
+    {
+        printf("Error(Exists I2C slave address): %s", command);
+        return 0;
+    }
+
+    while (fgets(buf, sizeof(buf), fp) != NULL)
+    {
+        char *p;
+        p = strchr(buf, '\n');
+        if (p != NULL)
+        {
+            *p = '\0';
+        }
+        strcpy(i2c_detect_line, buf);
+    }
+
+    pclose(fp);
+
+    printf("%s\n", i2c_detect_line);
+
+    int i2c_detect_line_len = strlen(i2c_detect_line);
+    if (i2c_detect_line_len == 0)
+    {
+        return 0;
+    }
+    return id;
 }
 
 #ifdef __cplusplus

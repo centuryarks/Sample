@@ -38,6 +38,7 @@ extern "C" {
 
 #define COMMUNICATION_SUCCESS           (0)
 #define COMMUNICATION_ERROR             (1)
+#define BUFFER_MAX                      (128)
 
 
 /***************************************************************
@@ -52,6 +53,7 @@ s32 i2c_close(i2c_dev_t i2c_dev);
 s32 i2c_set_slave_force(i2c_dev_t i2c_dev, u16 slaveAddr);
 s32 i2c_read(i2c_dev_t i2c_dev, u16 slaveAddr, u8* writeData, u16 wlen, u8* readData, u16 rlen);
 s32 i2c_write(i2c_dev_t i2c_dev, u16 slaveAddr, u8* writeData, u16 len);
+s32 i2c_exists(i2c_dev_t i2c_dev, u16 slaveAddr, u16 id, u8 *searchPattern);
 
 /***************************************************************
  *  Delay function for communication
